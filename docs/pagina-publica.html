@@ -128,6 +128,7 @@ summary { cursor: pointer; font-weight: 600; min-height: 28px; }
 details p, details li { margin-top: 8px; font-size: 15px; }
 a { color: var(--accent); }
 ul.src { font-size: 14px; display: flex; flex-direction: column; gap: 6px; padding-left: 18px; margin: 0; }
+.bar { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
 footer { font-size: 13px; color: var(--muted); }
 .steps { margin: 8px 0 0; padding-left: 20px; font-size: 15px; }
 </style>
@@ -149,6 +150,7 @@ footer { font-size: 13px; color: var(--muted); }
 <div class="wrap">
 
 <header style="display:flex;flex-direction:column;gap:18px">
+  <div class="bar" data-noi18n><button class="btn" id="bt-lang" type="button">EN</button><button class="btn" id="bt-theme" type="button">Tema</button></div>
   <span class="tag">Proyecto abierto · datos a 2 nov 2026</span>
   <h1>Una barrera para que un error humano no baste</h1>
   <p class="lead">El 28 de octubre murieron 69 personas cerca de Toledo. Proponemos una herramienta simple para el momento más delicado: cuando el sistema principal falla y las órdenes dependen de una persona.</p>
@@ -422,45 +424,92 @@ footer { font-size: 13px; color: var(--muted); }
 (function () {
   "use strict";
   var $ = function (id) { return document.getElementById(id); };
+  var EN = {"Proyecto abierto · datos a 2 nov 2026": "Open project · data as of 2 Nov 2026", "Una barrera para que un error humano no baste": "A barrier so a human error is not enough", "El 28 de octubre murieron 69 personas cerca de Toledo. Proponemos una herramienta simple para el momento más delicado: cuando el sistema principal falla y las órdenes dependen de una persona.": "On 28 October, 69 people died near Toledo. We propose a simple tool for the most delicate moment: when the main system fails and orders depend on one person.", "AVE · en marcha": "AVE · running", "Iryo · parado delante": "Iryo · stopped ahead", "La vista es un esquema, no está a escala.": "The view is a schematic, not to scale.", "Prototipo de investigación.": "Research prototype.", "No es un sistema real ni certificado y no señala culpables: la investigación oficial sigue abierta y casi todo es provisional. Recuerdo y respeto para las víctimas.": "Not a real or certified system, and it does not point to anyone to blame: the official investigation is still open and almost everything is provisional. Remembrance and respect for the victims.", "La idea en 10 segundos": "The idea in 10 seconds", "Problema, herramienta, resultado": "Problem, tool, result", "El problema": "The problem", "Cuando cae el LZB, el sistema que vigila a los trenes, todo depende de las órdenes de una persona. Si se equivoca, nada la frena.": "When the LZB, the system that watches the trains, goes down, everything depends on one person's orders. If they get it wrong, nothing stops them.", "La herramienta": "The tool", "La": "The", "Guarda": "Guard", "revisa cada orden antes de enviarla. Si hay un tren delante sin confirmar libre, bloquea la marcha normal.": "checks every order before it is sent. If there is a train ahead that is not confirmed clear, it blocks normal running.", "El resultado": "The result", "En el modelo, con la Guarda los dos trenes siempre salen sin chocar, y el servicio no se bloquea.": "In the model, with the Guard both trains always get out without colliding, and service is never blocked.", "La Guarda: un segundo par de ojos": "The Guard: a second pair of eyes", "Es un programa que se coloca entre el control y los trenes. No da órdenes ni sustituye a nadie. Solo hace una pregunta antes de dejar pasar una orden.": "It is a program that sits between the control centre and the trains. It does not give orders or replace anyone. It only asks one question before letting an order through.", "orden: AVE, marcha normal": "order: AVE, normal running", "envía": "sends", "GUARDA": "GUARD", "¿hay un tren delante": "is there a train ahead", "sin confirmar libre?": "not confirmed clear?", "SÍ": "YES", "Orden pasa": "Order passes", "el tren avanza": "the train moves", "Orden bloqueada": "Order blocked", "Solo se permite": "Only allowed:", "marcha a la vista": "proceed on sight", "(máx. 40 km/h)": "(max. 40 km/h)", "+ aviso con el motivo": "+ warning with the reason", "Una sola regla, aplicada en cada orden del modo degradado.": "One rule, applied to every order in degraded mode.", "Así se vería para el controlador": "What the controller would see", "PANEL DE CONTROL · MODO DEGRADADO (ejemplo)": "CONTROL PANEL · DEGRADED MODE (example)", "Orden: AVE 2080 → marcha normal": "Order: AVE 2080 → normal running", "ORDEN BLOQUEADA": "ORDER BLOCKED", "Iryo 6076 está parado delante, en el tramo 3, sin confirmar libre.": "Iryo 6076 is stopped ahead, in section 3, not confirmed clear.", "Alternativa permitida:": "Allowed alternative:", "marcha a la vista, máx. 40 km/h": "proceed on sight, max. 40 km/h", "Pantalla inventada para ilustrar la idea. No es ninguna pantalla real de Adif.": "Invented screen to illustrate the idea. It is not a real Adif screen.", "Con y sin la Guarda": "With and without the Guard", "orden": "order", "Nada la frena si falla la persona": "Nothing stops it if the person fails", "1 barrera humana": "1 human barrier", "Sin la Guarda: depende de una sola persona.": "Without the Guard: it depends on a single person.", "Una orden peligrosa se detiene antes": "A dangerous order is stopped earlier", "2 barreras: persona + Guarda": "2 barriers: person + Guard", "Con la Guarda: una segunda comprobación automática.": "With the Guard: a second, automatic check.", "Qué es": "What it is", "Un aviso que bloquea una orden concreta": "A warning that blocks one specific order", "Una regla simple y comprobada": "A simple, tested rule", "Un prototipo abierto para revisar": "An open prototype to be reviewed", "Qué no es": "What it is not", "No sustituye a controladores ni maquinistas": "It does not replace controllers or drivers", "No es un sistema certificado": "It is not a certified system", "No afirma cuál fue la causa real": "It does not claim what the real cause was", "Pruébalo tú": "Try it yourself", "Ponte en el puesto de control": "Take the controller's seat", "El AVE (azul marino) va detrás del Iryo (gris azulado). Cae el LZB. Tú autorizas. Cambia la Guarda y compara.": "The AVE (navy) is behind the Iryo (grey-blue). The LZB fails. You authorise. Switch the Guard and compare.", "Guarda activada": "Guard on", "1. Cae el LZB": "1. LZB fails", "AVE: marcha normal": "AVE: normal running", "AVE: a la vista": "AVE: on sight", "Iryo: a la vista": "Iryo: on sight", "Avanzar": "Step", "Reiniciar": "Reset", "Caso del 28-oct sin Guarda": "28 Oct case without the Guard", "Mismo caso con Guarda": "Same case with the Guard", "¿Qué es \"a la vista\" y \"normal\"?": "What do \"on sight\" and \"normal\" mean?", "A la vista el tren va despacio (máx. 40 km/h) y puede parar ante lo que vea. En marcha normal va a la velocidad de la línea, y entre balizas nada vigila la distancia con el tren de delante.": "On sight the train goes slowly (max. 40 km/h) and can stop for whatever it sees. In normal running it goes at line speed, and between beacons nothing watches the distance to the train ahead.", "Qué pasó": "What happened", "Los hechos, paso a paso": "The facts, step by step", "Desliza para avanzar": "Slide to move forward", "Las horas varían entre fuentes (el fallo se sitúa entre las 08:30 y las 08:32).": "Times vary between sources (the failure is placed between 08:30 and 08:32).", "Por qué funciona": "Why it works", "Sumar una barrera tapa el hueco": "Adding one barrier closes the gap", "Señales": "Signals", "LZB (caído)": "LZB (down)", "Personas": "People", "El error (flecha roja) cruza los huecos alineados hasta chocar con la Guarda.": "The error (red arrow) passes through the aligned holes until it hits the Guard.", "Cada capa tiene huecos. El peligro aparece cuando se alinean. La Guarda es una capa sin hueco en ese punto.": "Every layer has holes. Danger appears when they line up. The Guard is a layer with no hole at that point.", "La prueba matemática": "The mathematical proof", "Una herramienta llamada TLA+ revisa todas las combinaciones posibles de un modelo con dos trenes y seis tramos.": "A tool called TLA+ checks every possible combination of a model with two trains and six sections.", "Seguro": "Safe", "situaciones sin choque si se cumple el procedimiento (marcha a la vista).": "situations without a collision if the procedure is followed (proceed on sight).", "Choque": "Collision", "5 pasos": "5 steps", "bastan para chocar si el control puede autorizar marcha normal con un tren delante.": "are enough to collide if the control centre can authorise normal running with a train ahead.", "situaciones sin choque con la Guarda, y ambos trenes siempre pueden salir.": "situations without a collision with the Guard, and both trains can always get out.", "Los 5 pasos del choque": "The 5 steps to the collision", "Los dos trenes circulan con LZB.": "Both trains run with LZB.", "Cae el LZB y ambos se detienen.": "The LZB fails and both stop.", "Se autoriza al AVE en marcha normal.": "The AVE is authorised in normal running.", "El AVE avanza un tramo.": "The AVE moves forward one section.", "Entra en el tramo del Iryo: choque.": "It enters the Iryo's section: collision.", "Dato importante:": "Important:", "si se sigue el procedimiento, el modelo ya es seguro. La Guarda importa solo cuando alguien se desvía, y bajo presión pasa. Además, el código de la Guarda se probó contra esos 5 pasos y bloquea justo el que lleva al choque.": "if the procedure is followed, the model is already safe. The Guard matters only when someone deviates, and under pressure that happens. Also, the Guard's code was tested against those 5 steps and blocks exactly the one that leads to the collision.", "Transparencia": "Transparency", "Qué se sabe y qué no es público": "What is known and what is not public", "Dato": "Fact", "Estado": "Status", "Detalle": "Detail", "69 fallecidos": "69 deaths", "Oficial": "Official", "Provisional. Heridos: entre 100 y 179 según fuente.": "Provisional. Injured: between 100 and 179 depending on source.", "Choque ~08:53, km 118, Madrid-Sevilla": "Collision ~08:53, km 118, Madrid-Seville", "Ministerio y primer informe de la AITAT.": "Ministry and first AITAT report.", "LZB cae ~22 min antes": "LZB fails ~22 min earlier", "Primer informe AITAT. Tramo afectado: 63 a 90 km según fuente.": "First AITAT report. Affected stretch: 63 to 90 km depending on source.", "Debía ordenarse marcha a la vista": "Proceed on sight should have been ordered", "Versión del ministerio. No hemos leído la norma exacta.": "Ministry's version. We have not read the exact rule.", "Velocidad del impacto": "Impact speed", "Estimada": "Estimated", "160 a 200 km/h. Falta analizar las cajas negras.": "160 to 200 km/h. Black boxes still to be analysed.", "Maquinista pidió pasar señal en rojo": "Driver asked to pass a red signal", "Según medios": "According to media", "Sin fuente oficial.": "No official source.", "Otro maquinista corrigió la orden; el Iryo avisó dos veces": "Another driver corrected the order; the Iryo warned twice", "Según el ministro": "According to the minister", "Sin verificar de forma independiente.": "Not independently verified.", "Trenes detenidos": "Trains stopped", "Contradictorio": "Contradictory", "Seis o hasta ocho.": "Six or up to eight.", "Causa del fallo del LZB": "Cause of the LZB failure", "Se desconoce": "Unknown", "Se habla de un fallo informático; sin causa confirmada.": "An IT fault is mentioned; no confirmed cause.", "Por qué se dio la orden": "Why the order was given", "Sumario judicial secreto.": "Judicial file is secret.", "Procedimiento interno de Adif ante la caída del LZB": "Adif's internal procedure when the LZB fails", "No público": "Not public", "Base: Reglamento de Circulación (RD 664/2015). No hallamos el apartado concreto.": "Basis: Railway Traffic Regulation (RD 664/2015). We did not find the specific section.", "Audios del centro de control y cajas negras": "Control-centre audio and black boxes", "En manos de Guardia Civil y AITAT. Hay filtraciones sin verificar.": "Held by the Guardia Civil and AITAT. Unverified leaks exist.", "Informe final y resultado judicial": "Final report and court outcome", "Pendiente": "Pending", "Juzgado nº 2 de Orgaz (Toledo).": "Court no. 2 of Orgaz (Toledo).", "Un aviso previo de 2024": "A prior warning from 2024", "Según la prensa, la CIAF analizó en 2024 un incidente en Cuenca-Fernando Zóbel donde se reanudó la marcha por una comprobación humana de que la vía estaba libre, y advirtió de que es una barrera frágil. Adif dice que no rechazó sus recomendaciones. Las fuentes discrepan en cuántas eran (5 o 7) y en su estado.": "According to the press, in 2024 the CIAF analysed an incident at Cuenca-Fernando Zóbel where running was resumed on a human check that the line was clear, and warned that it is a fragile barrier. Adif says it did not reject its recommendations. Sources disagree on how many there were (5 or 7) and on their status.", "Debate laboral": "Labour dispute", "Los controladores de Adif han convocado huelga y su sindicato afirma que falta un 20 % de plantilla. Es una afirmación de una de las partes. Las responsabilidades las fijará la investigación, no este proyecto.": "Adif controllers have called a strike and their union says staffing is 20 % short. That is one party's claim. Responsibilities will be set by the investigation, not by this project.", "Límites y glosario": "Limits and glossary", "Lo que no debes dar por hecho": "What you should not take for granted", "Este modelo no es un sistema real": "This model is not a real system", "No sustituye normas ni profesionales, no está certificado (series EN 50126, 50128 y 50129) y solo representa dos trenes y seis tramos. Suponemos que al caer el LZB los trenes se paran y que a la vista el maquinista frena ante un obstáculo.": "It does not replace rules or professionals, it is not certified (EN 50126, 50128 and 50129 series) and it only represents two trains and six sections. We assume that when the LZB fails the trains stop, and that on sight the driver brakes for an obstacle.", "Busco revisión de profesionales": "Looking for professional review", "Si trabajas en señalización, circulación o métodos formales y ves algo incorrecto, el modelo debe cambiar.": "If you work in signalling, traffic operations or formal methods and see something wrong, the model should change.", "Glosario": "Glossary", "vigilancia continua de los trenes por un cable entre carriles.": "continuous train supervision through a cable between the rails.", "ayuda a la conducción que solo actúa en puntos concretos (balizas).": "driving aid that only acts at specific points (beacons).", "Modo degradado:": "Degraded mode:", "funcionamiento de respaldo cuando cae el sistema principal.": "backup operation when the main system goes down.", "Tramo (cantón):": "Section (block):", "trozo de vía donde solo cabe un tren.": "a stretch of track where only one train fits.", "organismos de investigación técnica de accidentes.": "technical accident investigation bodies.", "lenguaje que prueba todas las combinaciones posibles de un modelo.": "a language that checks every possible combination of a model.", "Fuentes": "Sources", "Euronews: los 17 minutos antes": "Euronews: the 17 minutes before", "Time: 69 muertos y declaraciones del ministro": "Time: 69 dead and the minister's statements", "Ara: qué falló técnicamente": "Ara: what failed technically", "El Español: minuto a minuto": "El Español: minute by minute", "El Español: lo que describió el ministro": "El Español: what the minister described", "Euronews: debate sobre degradar el LZB y la CIAF": "Euronews: debate on degrading the LZB and the CIAF", "The Objective: consigna de Renfe de 40 km/h": "The Objective: Renfe's 40 km/h instruction", "Infobae: primer informe técnico": "Infobae: first technical report", "Datos de fuentes públicas a 2 de noviembre de 2026; pueden cambiar con el informe de la AITAT.": "Data from public sources as of 2 November 2026; may change with the AITAT report."};
+  var EN_ARIA = {"Un tren en marcha detrás de otro tren detenido sobre la misma vía": "A moving train behind another train stopped on the same track", "Señal que falla": "A failing signal", "Escudo con una marca de verificación": "Shield with a check mark", "Dos trenes que se detienen a distancia": "Two trains stopping at a distance", "Flujo: el control envía una orden, la Guarda pregunta si hay un tren delante sin confirmar libre; si no, permite; si sí, bloquea la marcha normal y ofrece la marcha a la vista": "Flow: the control centre sends an order, the Guard asks whether there is a train ahead not confirmed clear; if not, it allows; if so, it blocks normal running and offers proceed on sight", "Ejemplo de pantalla con una orden bloqueada": "Example screen with a blocked order", "Sin Guarda: la orden del control llega directa al AVE y solo una persona puede detenerla": "Without the Guard: the control centre order goes straight to the AVE and only a person can stop it", "Con Guarda: la orden pasa primero por la Guarda antes de llegar al AVE": "With the Guard: the order first passes through the Guard before reaching the AVE", "Seis tramos de vía con los dos trenes": "Six sections of track with the two trains", "Posición de los dos trenes en cada momento (no está a escala)": "Position of the two trains at each moment (not to scale)", "Cinco lonchas de queso con agujeros: una flecha atraviesa las cuatro primeras y la quinta, la Guarda, la detiene": "Five slices of cheese with holes: an arrow passes through the first four and the fifth, the Guard, stops it"};
+  var lang = "es", theme = "light";
+  function L(p) { return Array.isArray(p) ? p[lang === "en" ? 1 : 0] : p; }
+  function store(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  function load(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+
+  /* ---------- Idioma de los textos estáticos ---------- */
+  var nodes = [], ariaEls = [];
+  (function collect() {
+    var w = document.createTreeWalker(document.querySelector(".wrap"), NodeFilter.SHOW_TEXT, {
+      acceptNode: function (n) {
+        if (!n.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+        var p = n.parentNode;
+        if (p.closest("[data-noi18n],script,style,#log,#track,#say,#lzb-state,#ev-time,#ev-badge,#ev-title,#ev-text")) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    var n;
+    while ((n = w.nextNode())) nodes.push({ n: n, es: n.nodeValue });
+    document.querySelectorAll("[aria-label]").forEach(function (el) {
+      if (el.closest("[data-noi18n]")) return;
+      ariaEls.push({ el: el, es: el.getAttribute("aria-label") });
+    });
+  })();
+  function applyStatic() {
+    nodes.forEach(function (o) {
+      var key = o.es.trim();
+      o.n.nodeValue = (lang === "en" && EN[key] !== undefined) ? o.es.replace(key, EN[key]) : o.es;
+    });
+    ariaEls.forEach(function (o) {
+      o.el.setAttribute("aria-label", (lang === "en" && EN_ARIA[o.es]) ? EN_ARIA[o.es] : o.es);
+    });
+    document.documentElement.setAttribute("lang", lang);
+    $("bt-lang").textContent = lang === "es" ? "EN" : "ES";
+    $("bt-lang").setAttribute("aria-label", lang === "es" ? "Switch to English" : "Cambiar a español");
+  }
+
+  /* ---------- Tema ---------- */
+  function applyTheme() {
+    document.documentElement.setAttribute("data-theme", theme);
+    $("bt-theme").textContent = theme === "light" ? (lang === "es" ? "☾ Modo oscuro" : "☾ Dark mode") : (lang === "es" ? "☀ Modo claro" : "☀ Light mode");
+  }
+  $("bt-theme").addEventListener("click", function () { theme = theme === "light" ? "dark" : "light"; store("gd-theme", theme); applyTheme(); });
+  $("bt-lang").addEventListener("click", function () { lang = lang === "es" ? "en" : "es"; store("gd-lang", lang); refresh(); });
 
   /* ---------- Línea de tiempo ---------- */
+  var OFF = ["b-ok", ["Oficial", "Official"]], MED = ["b-warn", ["Según medios", "According to media"]], MIN = ["b-warn", ["Según el ministro", "According to the minister"]];
   var EVENTS = [
-    { t: "~08:30", b: ["b-ok", "Oficial"], h: "Cae el LZB", ax: 20,
-      p: "Un fallo informático deja sin servicio la vigilancia continua. Los trenes de ese tramo se detienen, entre ellos el Iryo y el AVE que viene detrás." },
-    { t: "~08:36", b: ["b-ok", "Oficial"], h: "El control autoriza al AVE a continuar", ax: 20,
-      p: "Debía ordenarse marcha a la vista (máx. 40 km/h). Según el ministerio, se permitió circular con normalidad." },
-    { t: "Sin hora fija", b: ["b-warn", "Según medios"], h: "El AVE pide pasar una señal en rojo", ax: 20,
-      p: "Se ha publicado que el maquinista pidió permiso para rebasar una señal roja. No hay confirmación oficial." },
-    { t: "~08:41 a 08:48", b: ["b-warn", "Según el ministro"], h: "El Iryo avisa de que no puede arrancar", ax: 20,
-      p: "La maquinista comunica que sigue parada. Según el ministro, avisó dos veces. Se desconoce qué se hizo con el aviso." },
-    { t: "~08:43 a 08:53", b: ["b-warn", "Reconstrucción no oficial"], h: "El AVE reanuda y acelera", ax: 190,
-      p: "Un medio, con datos de geolocalización, calcula que recorre unos 25 km a gran velocidad. No es una medición oficial." },
-    { t: "~08:53", b: ["b-ok", "Oficial"], h: "El AVE choca con el Iryo", ax: 252,
-      p: "Ocurre en el km 118 de la línea Madrid-Sevilla, a una velocidad estimada de 160 a 200 km/h." },
-    { t: "Después", b: ["b-bad", "En investigación"], h: "69 fallecidos y dos investigaciones", ax: 252,
-      p: "La AITAT investiga la parte técnica y un juzgado de Orgaz la judicial, con secreto de sumario." }
+    { t: "~08:30", b: OFF, ax: 20, h: ["Cae el LZB", "The LZB fails"],
+      p: ["Un fallo informático deja sin servicio la vigilancia continua. Los trenes de ese tramo se detienen, entre ellos el Iryo y el AVE que viene detrás.", "An IT fault knocks out continuous supervision. The trains in that stretch stop, including the Iryo and the AVE behind it."] },
+    { t: "~08:36", b: OFF, ax: 20, h: ["El control autoriza al AVE a continuar", "The control centre authorises the AVE to continue"],
+      p: ["Debía ordenarse marcha a la vista (máx. 40 km/h). Según el ministerio, se permitió circular con normalidad.", "Proceed on sight (max. 40 km/h) should have been ordered. According to the ministry, normal running was allowed."] },
+    { t: ["Sin hora fija", "No fixed time"], b: MED, ax: 20, h: ["El AVE pide pasar una señal en rojo", "The AVE asks to pass a red signal"],
+      p: ["Se ha publicado que el maquinista pidió permiso para rebasar una señal roja. No hay confirmación oficial.", "It has been reported that the driver asked permission to pass a red signal. There is no official confirmation."] },
+    { t: ["~08:41 a 08:48", "~08:41 to 08:48"], b: MIN, ax: 20, h: ["El Iryo avisa de que no puede arrancar", "The Iryo warns it cannot start"],
+      p: ["La maquinista comunica que sigue parada. Según el ministro, avisó dos veces. Se desconoce qué se hizo con el aviso.", "The driver reports she is still stopped. According to the minister, she warned twice. What was done with the warning is unknown."] },
+    { t: ["~08:43 a 08:53", "~08:43 to 08:53"], b: ["b-warn", ["Reconstrucción no oficial", "Unofficial reconstruction"]], ax: 190, h: ["El AVE reanuda y acelera", "The AVE restarts and accelerates"],
+      p: ["Un medio, con datos de geolocalización, calcula que recorre unos 25 km a gran velocidad. No es una medición oficial.", "A news outlet, using geolocation data, calculates it covers about 25 km at high speed. It is not an official measurement."] },
+    { t: "~08:53", b: OFF, ax: 252, h: ["El AVE choca con el Iryo", "The AVE hits the Iryo"],
+      p: ["Ocurre en el km 118 de la línea Madrid-Sevilla, a una velocidad estimada de 160 a 200 km/h.", "It happens at km 118 of the Madrid-Seville line, at an estimated 160 to 200 km/h."] },
+    { t: ["Después", "Afterwards"], b: ["b-bad", ["En investigación", "Under investigation"]], ax: 252, h: ["69 fallecidos y dos investigaciones", "69 dead and two investigations"],
+      p: ["La AITAT investiga la parte técnica y un juzgado de Orgaz la judicial, con secreto de sumario.", "AITAT investigates the technical side and a court in Orgaz the judicial one, under secrecy of the file."] }
   ];
+  var curEv = 0;
   function showEvent(i) {
-    var e = EVENTS[i];
-    $("ev-time").textContent = e.t;
-    var bd = $("ev-badge"); bd.className = "badge " + e.b[0]; bd.textContent = e.b[1];
-    $("ev-title").textContent = e.h; $("ev-text").textContent = e.p;
+    curEv = i; var e = EVENTS[i];
+    $("ev-time").textContent = L(e.t);
+    var bd = $("ev-badge"); bd.className = "badge " + e.b[0]; bd.textContent = L(e.b[1]);
+    $("ev-title").textContent = L(e.h); $("ev-text").textContent = L(e.p);
     $("r-ave").setAttribute("x", e.ax);
     $("r-ave").style.color = i >= 5 ? "var(--bad)" : "var(--accent)";
     $("r-boom").setAttribute("visibility", i === 5 ? "visible" : "hidden");
   }
   $("scrub").addEventListener("input", function (ev) { showEvent(+ev.target.value); });
-  showEvent(0);
 
   /* ---------- Simulador ---------- */
-  var N = 6, S, timer = null;
+  var N = 6, S, timer = null, lastSay = null;
   var NAME = { A: "AVE", I: "Iryo" };
   function fresh() { return { lzb: true, pos: { A: 1, I: 3 }, moving: { A: true, I: true }, auth: { A: "none", I: "none" }, collision: false, log: [] }; }
   function other(t) { return t === "A" ? "I" : "A"; }
   function occupied(cell, t) { return cell <= N && S.pos[other(t)] === cell; }
   function trainAhead(t) { var u = other(t); return S.pos[u] > S.pos[t] && S.pos[u] <= N; }
-  function say(msg, kind) { var e = $("say"); e.textContent = msg; e.className = "say" + (kind ? " " + kind : ""); }
-  function logit(m) { S.log.push(m); }
+  function say(pair, kind) { lastSay = { p: pair, k: kind }; paintSay(); }
+  function paintSay() { if (!lastSay) return; var e = $("say"); e.textContent = L(lastSay.p); e.className = "say" + (lastSay.k ? " " + lastSay.k : ""); }
+  function logit(pair) { S.log.push(pair); }
 
   function render() {
     var h = "";
@@ -469,11 +518,11 @@ footer { font-size: 13px; color: var(--muted); }
       ["A", "I"].forEach(function (t) {
         if (S.pos[t] === c) inner += '<span class="train ' + t + (S.collision ? " crash" : "") + '">' + NAME[t] + (S.moving[t] ? " ▶" : " ■") + "</span>";
       });
-      h += '<div class="cell"><small>Tramo ' + c + "</small>" + inner + "</div>";
+      h += '<div class="cell"><small>' + L(["Tramo", "Section"]) + " " + c + "</small>" + inner + "</div>";
     }
     $("track").innerHTML = h;
-    $("lzb-state").innerHTML = '<span class="lamp" style="background:' + (S.lzb ? "var(--ok)" : "var(--bad)") + '"></span>LZB: <strong>' + (S.lzb ? "operativo" : "caído") + "</strong>" + (S.collision ? ' <span class="badge b-bad">Colisión simulada</span>' : "");
-    $("log").innerHTML = S.log.map(function (m) { return "<li>" + m + "</li>"; }).join("");
+    $("lzb-state").innerHTML = '<span class="lamp" style="background:' + (S.lzb ? "var(--ok)" : "var(--bad)") + '"></span>LZB: <strong>' + (S.lzb ? L(["operativo", "working"]) : L(["caído", "down"])) + "</strong>" + (S.collision ? ' <span class="badge b-bad">' + L(["Colisión simulada", "Simulated collision"]) + "</span>" : "");
+    $("log").innerHTML = S.log.map(function (m) { return "<li>" + L(m) + "</li>"; }).join("");
     var busy = timer !== null;
     $("b-fail").disabled = busy || !S.lzb || S.collision;
     ["b-normal", "b-sight", "b-iryo", "b-tick"].forEach(function (id) { $(id).disabled = busy || S.collision; });
@@ -484,22 +533,22 @@ footer { font-size: 13px; color: var(--muted); }
     if (S.collision) return;
     ["A", "I"].forEach(function (t) {
       if (!S.moving[t] || S.pos[t] > N) return;
-      var nxt = S.pos[t] + 1;
+      var nxt = S.pos[t] + 1, X = NAME[t];
       if ((S.lzb || S.auth[t] === "sight") && occupied(nxt, t)) {
         S.moving[t] = false; S.auth[t] = "none";
-        var why = S.lzb ? "el LZB lo frena" : "el maquinista ve el tren y frena a tiempo porque va despacio";
-        logit(NAME[t] + " se detiene: " + why + ".");
-        say(NAME[t] + " se detiene a tiempo: " + why + ".", "ok");
+        var why = S.lzb ? ["el LZB lo frena", "the LZB brakes it"] : ["el maquinista ve el tren y frena a tiempo porque va despacio", "the driver sees the train and brakes in time because it is going slowly"];
+        logit([X + " se detiene: " + why[0] + ".", X + " stops: " + why[1] + "."]);
+        say([X + " se detiene a tiempo: " + why[0] + ".", X + " stops in time: " + why[1] + "."], "ok");
         return;
       }
       S.pos[t] = nxt;
-      if (nxt > N) { S.moving[t] = false; S.auth[t] = "none"; logit(NAME[t] + " sale del tramo."); say(NAME[t] + " sale del tramo sin problema.", "ok"); return; }
+      if (nxt > N) { S.moving[t] = false; S.auth[t] = "none"; logit([X + " sale del tramo.", X + " leaves the section."]); say([X + " sale del tramo sin problema.", X + " leaves the section safely."], "ok"); return; }
       if (occupied(nxt, t)) {
         S.collision = true;
-        logit("Colisión simulada: " + NAME[t] + " entra en el tramo " + nxt + ", ocupado.");
-        say("Colisión simulada. A velocidad normal nada vigila la distancia entre balizas. Prueba de nuevo con la Guarda activada.", "bad");
+        logit(["Colisión simulada: " + X + " entra en el tramo " + nxt + ", ocupado.", "Simulated collision: " + X + " enters section " + nxt + ", which is occupied."]);
+        say(["Colisión simulada. A velocidad normal nada vigila la distancia entre balizas. Prueba de nuevo con la Guarda activada.", "Simulated collision. At normal speed nothing watches the distance between beacons. Try again with the Guard on."], "bad");
       } else if (S.auth[t] === "normal") {
-        say(NAME[t] + " avanza a velocidad normal. Aún no choca, pero no podría parar si hay un obstáculo.", "bad");
+        say([X + " avanza a velocidad normal. Aún no choca, pero no podría parar si hay un obstáculo.", X + " moves at normal speed. It has not hit anything yet, but it could not stop for an obstacle."], "bad");
       }
     });
   }
@@ -507,25 +556,30 @@ footer { font-size: 13px; color: var(--muted); }
   function failLZB() {
     if (!S.lzb || S.collision) return;
     S.lzb = false; S.moving.A = false; S.moving.I = false;
-    logit("Cae el LZB: todos los trenes se detienen.");
-    say("Cae el LZB y los dos trenes se paran. El Iryo sigue delante. Ahora decides tú.");
+    logit(["Cae el LZB: todos los trenes se detienen.", "The LZB fails: all trains stop."]);
+    say(["Cae el LZB y los dos trenes se paran. El Iryo sigue delante. Ahora decides tú.", "The LZB fails and both trains stop. The Iryo is still ahead. Now it is up to you."]);
   }
 
   function authorize(t, mode) {
-    if (S.lzb) { say("El LZB funciona todavía. Pulsa \"1. Cae el LZB\"."); return; }
-    if (S.moving[t]) { say(NAME[t] + " ya está en marcha."); return; }
-    if (S.pos[t] > N) { say(NAME[t] + " ya salió del tramo."); return; }
+    var X = NAME[t];
+    if (S.lzb) { say(["El LZB funciona todavía. Pulsa \"1. Cae el LZB\".", "The LZB still works. Press \"1. LZB fails\"."]); return; }
+    if (S.moving[t]) { say([X + " ya está en marcha.", X + " is already moving."]); return; }
+    if (S.pos[t] > N) { say([X + " ya salió del tramo.", X + " has already left the section."]); return; }
     if (mode === "normal" && $("guard").checked && trainAhead(t)) {
-      logit("La Guarda bloquea la marcha normal del " + NAME[t] + ".");
-      say("ORDEN BLOQUEADA por la Guarda: hay un tren delante en el mismo tramo sin confirmar libre. Solo se permite la marcha a la vista (máx. 40 km/h).", "ok");
+      logit(["La Guarda bloquea la marcha normal del " + X + ".", "The Guard blocks normal running for the " + X + "."]);
+      say(["ORDEN BLOQUEADA por la Guarda: hay un tren delante en el mismo tramo sin confirmar libre. Solo se permite la marcha a la vista (máx. 40 km/h).", "ORDER BLOCKED by the Guard: there is a train ahead in the same section, not confirmed clear. Only proceed on sight is allowed (max. 40 km/h)."], "ok");
       return;
     }
     S.moving[t] = true; S.auth[t] = mode;
-    logit("El control autoriza al " + NAME[t] + " en marcha " + (mode === "sight" ? "a la vista" : "normal") + ".");
-    say(mode === "sight" ? NAME[t] + " avanzará despacio. Pulsa \"Avanzar\"." : "Autorizado en marcha normal. Pulsa \"Avanzar\" y observa.", mode === "sight" ? "" : "bad");
+    logit(mode === "sight"
+      ? ["El control autoriza al " + X + " en marcha a la vista.", "The control centre authorises the " + X + " to proceed on sight."]
+      : ["El control autoriza al " + X + " en marcha normal.", "The control centre authorises the " + X + " to run at normal speed."]);
+    say(mode === "sight"
+      ? [X + " avanzará despacio. Pulsa \"Avanzar\".", X + " will move slowly. Press \"Step\"."]
+      : ["Autorizado en marcha normal. Pulsa \"Avanzar\" y observa.", "Authorised for normal running. Press \"Step\" and watch."], mode === "sight" ? "" : "bad");
   }
 
-  function reset() { clearInterval(timer); timer = null; S = fresh(); say("Los dos trenes circulan con el LZB operativo. Pulsa \"1. Cae el LZB\"."); render(); }
+  function reset() { clearInterval(timer); timer = null; S = fresh(); say(["Los dos trenes circulan con el LZB operativo. Pulsa \"1. Cae el LZB\".", "Both trains run with the LZB working. Press \"1. LZB fails\"."]); render(); }
 
   function autoplay(guard) {
     reset(); $("guard").checked = guard;
@@ -546,6 +600,13 @@ footer { font-size: 13px; color: var(--muted); }
   $("b-reset").addEventListener("click", reset);
   $("b-auto-off").addEventListener("click", function () { autoplay(false); });
   $("b-auto-on").addEventListener("click", function () { autoplay(true); });
+
+  function refresh() { applyStatic(); applyTheme(); showEvent(curEv); render(); paintSay(); }
+
+  var sl = load("gd-lang"), st = load("gd-theme");
+  if (sl === "en" || sl === "es") lang = sl;
+  if (st === "dark" || st === "light") theme = st;
   reset();
+  refresh();
 })();
 </script>
