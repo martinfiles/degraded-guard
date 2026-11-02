@@ -1,0 +1,5 @@
+node_modules/
+.next/
+tools/tla2tools.jar
+spec/states/
+*.tlacov

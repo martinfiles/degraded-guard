@@ -1,0 +1,91 @@
+{
+  "config": "Deviation",
+  "n": 6,
+  "states": [
+    {
+      "step": 1,
+      "action": "Initial",
+      "pos": {
+        "A": 1,
+        "I": 3
+      },
+      "moving": {
+        "A": true,
+        "I": true
+      },
+      "auth": {
+        "A": "none",
+        "I": "none"
+      },
+      "lzb": true
+    },
+    {
+      "step": 2,
+      "action": "LZBFail",
+      "pos": {
+        "A": 1,
+        "I": 3
+      },
+      "moving": {
+        "A": false,
+        "I": false
+      },
+      "auth": {
+        "A": "none",
+        "I": "none"
+      },
+      "lzb": false
+    },
+    {
+      "step": 3,
+      "action": "Authorize",
+      "pos": {
+        "A": 1,
+        "I": 3
+      },
+      "moving": {
+        "A": true,
+        "I": false
+      },
+      "auth": {
+        "A": "normal",
+        "I": "none"
+      },
+      "lzb": false
+    },
+    {
+      "step": 4,
+      "action": "MoveDegraded",
+      "pos": {
+        "A": 2,
+        "I": 3
+      },
+      "moving": {
+        "A": true,
+        "I": false
+      },
+      "auth": {
+        "A": "normal",
+        "I": "none"
+      },
+      "lzb": false
+    },
+    {
+      "step": 5,
+      "action": "MoveDegraded",
+      "pos": {
+        "A": 3,
+        "I": 3
+      },
+      "moving": {
+        "A": true,
+        "I": false
+      },
+      "auth": {
+        "A": "normal",
+        "I": "none"
+      },
+      "lzb": false
+    }
+  ]
+}
