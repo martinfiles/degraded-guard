@@ -1,0 +1,448 @@
+<title>Guarda del Modo Degradado</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Concepto: panel de señalización ferroviaria. Esquemas de vía por cantones, lámparas de señal como color semántico, tipografía de rótulo. */
+:root {
+  --bg: #f2f4f6;
+  --panel: #ffffff;
+  --fg: #14202b;
+  --muted: #55636f;
+  --line: #cdd5dc;
+  --accent: #0b5f8a;
+  --accent-ink: #ffffff;
+  --ok: #1b7f4b;
+  --warn: #a86400;
+  --bad: #c0302a;
+  --ok-bg: #e2f3ea;
+  --warn-bg: #fbefd9;
+  --bad-bg: #fbe4e2;
+  --track: #dfe5ea;
+  --font-display: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --font-body: "Public Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1620; --panel: #16212d; --fg: #e8eef3; --muted: #9fb0be; --line: #2c3b4a;
+    --accent: #5db6e8; --accent-ink: #08202e; --ok: #55c488; --warn: #e9b055; --bad: #ff7a72;
+    --ok-bg: #12301f; --warn-bg: #3a2b0e; --bad-bg: #3d1a18; --track: #223140; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1620; --panel: #16212d; --fg: #e8eef3; --muted: #9fb0be; --line: #2c3b4a;
+  --accent: #5db6e8; --accent-ink: #08202e; --ok: #55c488; --warn: #e9b055; --bad: #ff7a72;
+  --ok-bg: #12301f; --warn-bg: #3a2b0e; --bad-bg: #3d1a18; --track: #223140; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 16px; line-height: 1.6; }
+.wrap { max-width: 780px; margin: 0 auto; padding-block: 28px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 44px; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.1; margin: 0; text-wrap: balance; letter-spacing: .01em; }
+h1 { font-size: clamp(40px, 8vw, 60px); }
+h2 { font-size: clamp(28px, 5vw, 36px); }
+h3 { font-size: 22px; }
+p { margin: 0; max-width: 65ch; }
+section { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.lead { font-size: 18px; color: var(--muted); }
+.eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.notice { border: 1px solid var(--warn); background: var(--warn-bg); padding: 12px 14px; border-radius: 6px; font-size: 14px; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+button { font: inherit; cursor: pointer; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.btn { border: 1px solid var(--line); background: var(--panel); color: var(--fg); padding: 10px 14px; border-radius: 6px; font-size: 14px; font-weight: 500; min-height: 44px; }
+.btn:hover:not(:disabled) { border-color: var(--accent); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn.danger { border-color: var(--bad); color: var(--bad); }
+.row { display: flex; flex-wrap: wrap; gap: 8px; }
+.badge { display: inline-block; font-family: var(--font-mono); font-size: 11px; letter-spacing: .04em; padding: 2px 8px; border-radius: 99px; border: 1px solid currentColor; white-space: nowrap; }
+.b-ok { color: var(--ok); background: var(--ok-bg); }
+.b-warn { color: var(--warn); background: var(--warn-bg); }
+.b-bad { color: var(--bad); background: var(--bad-bg); }
+.time { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+/* Esquema de vía */
+.track { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 3px; }
+.cell { background: var(--track); border-radius: 4px; min-height: 84px; padding: 6px 4px; display: flex; flex-direction: column; align-items: center; gap: 6px; border-bottom: 4px solid var(--muted); }
+.cell small { font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
+.train { font-family: var(--font-display); font-size: 16px; font-weight: 700; padding: 1px 6px; border-radius: 4px; color: #fff; text-align: center; line-height: 1.3; }
+.train.A { background: #0b5f8a; } .train.I { background: #8a5a00; }
+.train.crash { background: var(--bad); animation: shake .4s 2; }
+@keyframes shake { 25% { transform: translateX(-3px); } 75% { transform: translateX(3px); } }
+@media (prefers-reduced-motion: reduce) { .train.crash { animation: none; } }
+.lamp { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+
+/* Línea de tiempo */
+.scrub { width: 100%; accent-color: var(--accent); min-height: 32px; }
+.ev-title { font-family: var(--font-display); font-size: 24px; font-weight: 700; }
+.stage { min-height: 150px; display: flex; flex-direction: column; gap: 8px; }
+.rail { position: relative; height: 56px; background: var(--track); border-radius: 6px; }
+.rail::after { content: ""; position: absolute; left: 8px; right: 8px; top: 50%; height: 3px; background: var(--muted); opacity: .5; }
+.rail .train { position: absolute; top: 14px; transition: left .5s; z-index: 1; }
+@media (prefers-reduced-motion: reduce) { .rail .train { transition: none; } }
+
+/* Capas */
+.seg { display: flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.seg button { flex: 1; border: 0; background: var(--panel); color: var(--fg); padding: 10px 8px; min-height: 44px; font-weight: 500; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.layers { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; }
+.layer { border: 1px solid var(--line); border-radius: 6px; padding: 12px; display: flex; flex-direction: column; gap: 6px; background: var(--panel); }
+.layer.off { opacity: .6; border-style: dashed; }
+.layer h3 { font-size: 20px; }
+.layer p { font-size: 14px; color: var(--muted); }
+
+/* Simulador */
+.say { border-left: 5px solid var(--accent); background: var(--panel); padding: 12px 14px; border-radius: 0 6px 6px 0; min-height: 76px; }
+.say.bad { border-color: var(--bad); background: var(--bad-bg); }
+.say.ok { border-color: var(--ok); background: var(--ok-bg); }
+.switch { display: flex; align-items: center; gap: 10px; min-height: 44px; }
+.switch input { width: 22px; height: 22px; accent-color: var(--accent); }
+.status { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font-size: 14px; }
+ol.log { margin: 0; padding-left: 20px; font-size: 14px; color: var(--muted); }
+
+/* Resultados del modelo */
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.card { border: 1px solid var(--line); border-radius: 8px; padding: 14px; background: var(--panel); display: flex; flex-direction: column; gap: 8px; }
+.big { font-family: var(--font-display); font-size: 34px; font-weight: 700; line-height: 1; }
+.steps { margin: 0; padding-left: 20px; font-size: 14px; }
+
+/* Tabla */
+.tw { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 14px; }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-family: var(--font-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+tr:last-child td { border-bottom: 0; }
+details { border: 1px solid var(--line); border-radius: 6px; background: var(--panel); padding: 10px 14px; }
+summary { cursor: pointer; font-weight: 600; min-height: 28px; }
+details p { margin-top: 8px; font-size: 15px; }
+a { color: var(--accent); }
+.src { font-size: 14px; display: flex; flex-direction: column; gap: 6px; padding-left: 18px; margin: 0; }
+footer { font-size: 13px; color: var(--muted); }
+</style>
+
+<div class="wrap">
+
+<header style="display:flex;flex-direction:column;gap:14px">
+  <span class="eyebrow">Proyecto de investigación abierto · datos a 2 de noviembre de 2026</span>
+  <h1>Guarda del Modo Degradado</h1>
+  <p class="lead">Qué pasó el 28 de octubre cerca de Toledo, por qué una señal que falla puede acabar en tragedia, y una idea para que un error humano no baste para provocarla. Todo explicado paso a paso y con simulaciones que puedes probar.</p>
+  <div class="notice"><strong>Antes de empezar.</strong> Este trabajo es un prototipo de investigación. No es un sistema real ni certificado, y no dice quién tiene la culpa. La investigación oficial sigue abierta y casi todo lo publicado es provisional. Nuestro respeto y recuerdo para las 69 personas fallecidas y sus familias.</div>
+</header>
+
+<!-- 1. Qué pasó -->
+<section id="que-paso">
+  <span class="eyebrow">Parte 1</span>
+  <h2>Qué pasó, momento a momento</h2>
+  <p>Dos trenes de alta velocidad iban de Madrid a Sevilla, uno detrás del otro. Mueve el control para recorrer los hechos. Cada dato lleva una etiqueta que indica cuánta confianza merece.</p>
+  <div class="panel">
+    <div class="rail" id="rail" role="img" aria-label="Esquema de la vía con la posición de los dos trenes (no está a escala)"></div>
+    <label for="scrub" class="eyebrow">Desliza para avanzar en el tiempo</label>
+    <input type="range" id="scrub" class="scrub" min="0" max="6" step="1" value="0">
+    <div class="stage" aria-live="polite">
+      <div class="row" style="align-items:center"><span class="time" id="ev-time"></span><span class="badge" id="ev-badge"></span></div>
+      <div class="ev-title" id="ev-title"></div>
+      <p id="ev-text"></p>
+    </div>
+  </div>
+  <div class="row"><span class="badge b-ok">Oficial</span><span class="badge b-warn">Según medios, sin confirmar</span><span class="badge b-bad">Se desconoce</span></div>
+  <p style="font-size:14px;color:var(--muted)">Las horas varían entre fuentes: unas sitúan el fallo a las 08:30 y otras a las 08:32. El esquema muestra el orden de los hechos, no distancias reales.</p>
+</section>
+
+<!-- 2. Capas -->
+<section id="capas">
+  <span class="eyebrow">Parte 2</span>
+  <h2>Qué te protege en un tren de alta velocidad</h2>
+  <p>La seguridad funciona por capas, como las lonchas de un queso: cada capa tiene huecos, y el peligro llega cuando los huecos de todas se alinean. Pulsa para ver qué pasa cuando cae el sistema principal.</p>
+  <div class="seg" role="group" aria-label="Estado del sistema LZB">
+    <button id="l-ok" aria-pressed="true">Todo funciona</button>
+    <button id="l-fail" aria-pressed="false">Cae el LZB</button>
+  </div>
+  <div class="layers" id="layers"></div>
+  <div class="say" id="layer-say" aria-live="polite"></div>
+</section>
+
+<!-- 3. Simulador -->
+<section id="simulador">
+  <span class="eyebrow">Parte 3 · Pruébalo tú</span>
+  <h2>Ponte en el puesto del centro de control</h2>
+  <p>Cae el LZB y todos los trenes se paran. El AVE (azul) está detrás y el Iryo (ocre) está parado delante. Tú decides cómo reanudar la marcha. Activa o desactiva la guarda y compara.</p>
+  <div class="panel">
+    <div class="track" id="track" role="img" aria-label="Esquema de seis tramos de vía con los trenes"></div>
+    <div class="status">
+      <span id="lzb-state"></span>
+      <label class="switch" for="guard"><input type="checkbox" id="guard" checked> Guarda activada (segundo par de ojos)</label>
+    </div>
+    <div class="say" id="say" aria-live="polite"></div>
+    <div class="row">
+      <button class="btn primary" id="b-fail">1. Cae el LZB</button>
+      <button class="btn danger" id="b-normal">Autorizar AVE: marcha normal</button>
+      <button class="btn" id="b-sight">Autorizar AVE: a la vista (40 km/h)</button>
+      <button class="btn" id="b-iryo">Autorizar Iryo: a la vista</button>
+      <button class="btn" id="b-tick">Avanzar un instante</button>
+      <button class="btn" id="b-reset">Reiniciar</button>
+    </div>
+    <div class="row">
+      <button class="btn" id="b-auto-off">Ver el 28-oct sin guarda</button>
+      <button class="btn" id="b-auto-on">Ver el mismo caso con guarda</button>
+    </div>
+    <ol class="log" id="log"></ol>
+  </div>
+  <details><summary>Qué significa "marcha a la vista" y "marcha normal"</summary>
+    <p>A la vista, el maquinista circula despacio (máximo 40 km/h) y debe poder parar antes de cualquier obstáculo que vea. En marcha normal el tren va a la velocidad habitual de la línea, y no hay nada que vigile la distancia con el tren de delante entre una baliza y la siguiente.</p></details>
+  <details><summary>Qué hace exactamente la guarda</summary>
+    <p>Es una regla muy simple: si hay otro tren por delante dentro del mismo tramo, el sistema no deja autorizar la marcha normal y obliga a usar la marcha a la vista. Pide una segunda comprobación en el único momento en que hace falta. No sustituye a las personas: evita que un fallo de atención baste para causar un accidente.</p></details>
+</section>
+
+<!-- 4. Modelo -->
+<section id="modelo">
+  <span class="eyebrow">Parte 4</span>
+  <h2>Cómo comprobamos que la idea funciona</h2>
+  <p>En lugar de confiar en un ejemplo, usamos una herramienta matemática (TLA+ y su verificador TLC) que prueba <strong>todas las combinaciones posibles</strong> de lo que puede pasar en un modelo simplificado: dos trenes y seis tramos. Si existe una secuencia que acaba en choque, la encuentra y la enseña paso a paso.</p>
+  <div class="cards">
+    <div class="card"><span class="badge b-ok">Seguro</span><h3>Se cumple el procedimiento</h3><div class="big">90</div><p style="font-size:14px">situaciones posibles revisadas, ninguna con choque. Con marcha a la vista, el maquinista frena a tiempo.</p></div>
+    <div class="card"><span class="badge b-bad">Choque</span><h3>El control se desvía</h3><div class="big">5 pasos</div><p style="font-size:14px">bastan para llegar a la colisión cuando se permite autorizar marcha normal con un tren delante.</p></div>
+    <div class="card"><span class="badge b-ok">Seguro</span><h3>Con la guarda</h3><div class="big">124</div><p style="font-size:14px">situaciones revisadas, ninguna con choque, y los dos trenes siempre acaban pudiendo salir. No bloquea el servicio.</p></div>
+  </div>
+  <details><summary>Los 5 pasos que encontró el verificador</summary>
+    <ol class="steps"><li>Los dos trenes circulan con el LZB operativo.</li><li>Cae el LZB y ambos se detienen.</li><li>El control autoriza al AVE en marcha normal, con el otro tren parado delante.</li><li>El AVE avanza un tramo.</li><li>El AVE entra en el tramo del Iryo: choque.</li></ol></details>
+  <p><strong>Un resultado que conviene no esconder:</strong> si el procedimiento se cumple (marcha a la vista), el modelo ya es seguro por sí solo. La guarda solo aporta valor cuando alguien se desvía del procedimiento, y las personas bajo presión a veces se desvían. Esa es la idea de fondo: una barrera que no dependa de que nadie falle.</p>
+  <p>Además, el motor de reglas de esta página se comprobó contra esa secuencia de 5 pasos, y bloquea justo el paso que lleva al choque.</p>
+</section>
+
+<!-- 5. Qué se sabe -->
+<section id="datos">
+  <span class="eyebrow">Parte 5 · Transparencia</span>
+  <h2>Qué sabemos y qué no es público</h2>
+  <p>Buscamos en prensa, comunicados oficiales y normativa. Esto es lo que encontramos y lo que no hemos podido verificar.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Dato</th><th>Estado</th><th>Detalle</th></tr></thead>
+    <tbody>
+      <tr><td>69 fallecidos; 66 identificados</td><td><span class="badge b-ok">Oficial</span></td><td>Cifras provisionales; los heridos varían entre fuentes (más de 100 y 179).</td></tr>
+      <tr><td>Choque por alcance a las 08:53 aprox., km 118, Madrid-Sevilla</td><td><span class="badge b-ok">Oficial</span></td><td>Ministerio de Transportes e informe preliminar de la AITAT.</td></tr>
+      <tr><td>Caída del LZB unos 22 minutos antes del choque</td><td><span class="badge b-ok">Oficial</span></td><td>Primer informe de la AITAT (5 páginas). Tramo afectado: entre 63 y 90 km según la fuente.</td></tr>
+      <tr><td>Debía ordenarse marcha a la vista (40 km/h)</td><td><span class="badge b-ok">Oficial</span></td><td>Versión del ministerio. El texto exacto de la norma no lo hemos podido leer.</td></tr>
+      <tr><td>Velocidad del AVE al chocar</td><td><span class="badge b-warn">Estimada</span></td><td>Entre 160 y 200 km/h. La cifra exacta depende de los registradores jurídicos (cajas negras), en análisis.</td></tr>
+      <tr><td>Un maquinista advirtió que no podía ser marcha normal y se corrigió su orden</td><td><span class="badge b-warn">Según el ministro</span></td><td>Declaración en rueda de prensa recogida por la prensa; sin verificar de forma independiente.</td></tr>
+      <tr><td>El maquinista del AVE pidió permiso para pasar una señal en rojo</td><td><span class="badge b-warn">Según medios</span></td><td>"Según se ha conocido"; sin fuente oficial.</td></tr>
+      <tr><td>El Iryo avisó dos veces de que no podía arrancar</td><td><span class="badge b-warn">Según el ministro</span></td><td>Sin confirmar con las grabaciones.</td></tr>
+      <tr><td>Reconstrucción de velocidades minuto a minuto</td><td><span class="badge b-warn">No oficial</span></td><td>Hecha por un medio con datos de geolocalización; no es la velocidad real del impacto.</td></tr>
+      <tr><td>Número de trenes detenidos</td><td><span class="badge b-warn">Contradictorio</span></td><td>Seis según el ministro; hasta ocho en otras informaciones.</td></tr>
+      <tr><td>Causa del fallo del LZB</td><td><span class="badge b-bad">Se desconoce</span></td><td>Se habla de un fallo informático de comunicación entre tres ordenadores de la red. Sin causa técnica confirmada.</td></tr>
+      <tr><td>Por qué se autorizó la marcha con el tren delante parado</td><td><span class="badge b-bad">Se desconoce</span></td><td>Las personas implicadas aún no han declarado y el sumario judicial es secreto.</td></tr>
+      <tr><td>Procedimiento interno exacto de Adif para cuando cae el LZB</td><td><span class="badge b-bad">No público</span></td><td>La base es el Reglamento de Circulación Ferroviaria (Real Decreto 664/2015), pero no hemos encontrado públicamente el texto del caso concreto de pérdida del LZB.</td></tr>
+      <tr><td>Grabaciones de audio del centro de control</td><td><span class="badge b-bad">No público</span></td><td>Hay informaciones que hablan de grabaciones filtradas; no están verificadas ni son oficiales.</td></tr>
+      <tr><td>Datos de las cajas negras y del sistema de control</td><td><span class="badge b-bad">No público</span></td><td>Bajo custodia de la Guardia Civil y de la AITAT.</td></tr>
+      <tr><td>Informe final de la AITAT y resultado judicial</td><td><span class="badge b-bad">Pendiente</span></td><td>La investigación judicial está en el Juzgado nº 2 de Orgaz (Toledo), con secreto de sumario.</td></tr>
+    </tbody></table></div>
+  <div class="panel">
+    <h3>Un aviso anterior que importa a esta idea</h3>
+    <p>Según la prensa, en 2024 la comisión de investigación de accidentes ferroviarios (CIAF) analizó un incidente en la estación de Cuenca-Fernando Zóbel, donde la autorización para reanudar se apoyó en una comprobación humana de que la vía estaba libre. La CIAF advirtió de que depender solo de una comprobación humana es una barrera frágil y recomendó restricciones técnicas automáticas. Adif sostiene que no rechazó las recomendaciones y que algunas ya estaban aplicadas o podían ser contraproducentes. Las fuentes discrepan en el número de recomendaciones (cinco o siete) y en su estado. Es la misma idea que explora este proyecto, pero no sabemos cómo se aplicaría en la realidad.</p>
+  </div>
+  <p style="font-size:14px;color:var(--muted)">También hay un debate laboral abierto: los controladores de Adif han convocado huelga y su sindicato afirma que falta un 20 % de plantilla. Es una afirmación de una de las partes. Las responsabilidades las determinará la investigación, no este proyecto.</p>
+</section>
+
+<!-- 6. Límites -->
+<section id="limites">
+  <span class="eyebrow">Parte 6</span>
+  <h2>Límites de este proyecto</h2>
+  <details open><summary>Lo que este modelo no es</summary>
+    <p>No es un sistema ferroviario real. No sustituye procedimientos, normas ni a profesionales. No ha pasado por la certificación que exigen las normas europeas de seguridad ferroviaria (la serie EN 50126, 50128 y 50129). Representa solo dos trenes y seis tramos.</p></details>
+  <details><summary>Lo que supone el modelo</summary>
+    <p>Que al caer el LZB los trenes se paran y no se mueven sin autorización, de modo que la última posición conocida sigue siendo válida. Que el maquinista frena ante un obstáculo cuando va a la vista. Y que el control puede desviarse del procedimiento. Las fuentes discrepan en si se autorizó a 40 km/h o a velocidad normal; aquí modelamos ambas posibilidades.</p></details>
+  <details><summary>Lo que necesitamos de profesionales</summary>
+    <p>Revisión de personas de señalización, circulación y métodos formales que corrijan lo que esté mal. Si el procedimiento real difiere de lo que suponemos, el modelo debe cambiar.</p></details>
+  <details><summary>Glosario</summary>
+    <p><strong>LZB:</strong> sistema que vigila a los trenes de forma continua mediante un cable entre los carriles. Instalado en Madrid-Andalucía desde 1992.</p>
+    <p><strong>ASFA:</strong> sistema de ayuda a la conducción que solo actúa en puntos concretos (balizas junto a las señales).</p>
+    <p><strong>BSL (bloqueo de señalización lateral):</strong> modo de respaldo en el que mandan las señales de al lado de la vía.</p>
+    <p><strong>Cantón o tramo:</strong> porción de vía donde solo puede haber un tren a la vez.</p>
+    <p><strong>AITAT / CIAF:</strong> organismos independientes de investigación técnica de accidentes.</p>
+    <p><strong>Cajas negras (JRU):</strong> registradores jurídicos de los trenes.</p>
+    <p><strong>TLA+ / TLC:</strong> lenguaje y verificador que prueban todas las combinaciones posibles de un modelo.</p></details>
+</section>
+
+<section id="fuentes">
+  <h2>Fuentes</h2>
+  <ul class="src">
+    <li><a href="https://en.wikipedia.org/wiki/2026_Toledo_train_collision" target="_blank" rel="noopener">Wikipedia: 2026 Toledo train collision</a></li>
+    <li><a href="https://www.euronews.com/2026/10/29/spain-train-crash-what-happened-in-the-17-minutes-before-the-collision" target="_blank" rel="noopener">Euronews: los 17 minutos antes de la colisión</a></li>
+    <li><a href="https://time.com/article/2026/10/29/spain-high-speed-train-crash-cause-inexplicable-human-error-transport/" target="_blank" rel="noopener">Time: 69 muertos y declaraciones del ministro</a></li>
+    <li><a href="https://en.ara.cat/media/what-failed-technically-in-the-train-crash-of-toledo_1_5894966.html" target="_blank" rel="noopener">Ara: qué falló técnicamente</a></li>
+    <li><a href="https://www.elespanol.com/invertia/observatorios/movilidad/20261028/accidente-minuto-ave-impacto-iryo-kmh-recibir-orden-adif-rebasar-semaforo-rojo/1003744438265_0.html" target="_blank" rel="noopener">El Español: el accidente, minuto a minuto</a></li>
+    <li><a href="https://www.elespanol.com/invertia/observatorios/movilidad/20261028/puente-describe-caos-control-adif-maquinista-advirtio-marcha-no-podia-normal-dieron-razon/1003744438318_0.html" target="_blank" rel="noopener">El Español: lo que describió el ministro sobre el control</a></li>
+    <li><a href="https://es.euronews.com/2026/11/02/la-tragedia-de-urda-reabre-en-europa-el-debate-sobre-las-fallas-de-seguridad-al-degradar-s" target="_blank" rel="noopener">Euronews: el debate sobre degradar el LZB y las recomendaciones de la CIAF</a></li>
+    <li><a href="https://theobjective.com/economia/transporte/2026-11-02/renfe-anula-consigna-velocidad-fallo-lz" target="_blank" rel="noopener">The Objective: la consigna de Renfe de 40 km/h, anulada</a></li>
+    <li><a href="https://www.infobae.com/espana/2026/10/29/la-colision-entre-el-ave-y-el-iryo-en-el-accidente-ferroviario-de-urda-toledo-se-produjo-a-mas-de-160-kmh-segun-el-primer-informe/" target="_blank" rel="noopener">Infobae: primer informe técnico</a></li>
+  </ul>
+  <footer>Hechos recogidos de fuentes públicas el 2 de noviembre de 2026; pueden cambiar cuando se publique el informe de la AITAT. Código del modelo y del motor de reglas en el repositorio del proyecto.</footer>
+</section>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+
+  /* ---------- Parte 1: línea de tiempo ---------- */
+  var EVENTS = [
+    { t: "~08:30", b: ["b-ok", "Oficial"], h: "Cae el sistema de señalización LZB", x: 6, y: 78,
+      p: "Un fallo informático deja sin servicio el LZB, el sistema que vigila a los trenes de forma continua. Los trenes de ese tramo se detienen. Uno de ellos es el Iryo; otro, el AVE que viene detrás." },
+    { t: "~08:36 a 08:40", b: ["b-ok", "Oficial"], h: "El centro de control autoriza al AVE a continuar", x: 6, y: 78,
+      p: "Según el ministerio, la orden debía ser marcha a la vista (máximo 40 km/h). Lo que se autorizó fue circular con normalidad. La hora exacta varía entre fuentes." },
+    { t: "Sin hora fija", b: ["b-warn", "Según medios"], h: "El AVE pide permiso para pasar una señal en rojo", x: 6, y: 78,
+      p: "Se ha publicado que el maquinista pidió autorización para rebasar una señal roja antes de reanudar. No hay confirmación oficial. Si fue así, había una señal que indicaba que el tramo no estaba libre." },
+    { t: "~08:41 a 08:48", b: ["b-warn", "Según el ministro"], h: "El Iryo informa de que no puede arrancar", x: 20, y: 78,
+      p: "La maquinista del Iryo comunica que no logra reiniciar el sistema y que sigue parada. Según el ministro, avisó dos veces. Se desconoce qué se hizo con ese aviso." },
+    { t: "~08:43 a 08:53", b: ["b-warn", "Reconstrucción no oficial"], h: "El AVE reanuda y acelera", x: 50, y: 78,
+      p: "Una reconstrucción de un medio, con datos de geolocalización, indica que el AVE recorre unos 25 km y alcanza velocidades altas. No es una medición oficial." },
+    { t: "~08:53", b: ["b-ok", "Oficial"], h: "El AVE choca por detrás con el Iryo", x: 76, y: 78,
+      p: "El choque ocurre en el kilómetro 118 de la línea Madrid-Sevilla. La velocidad estimada va de 160 a 200 km/h; la cifra exacta saldrá de las cajas negras." },
+    { t: "Después", b: ["b-bad", "En investigación"], h: "69 fallecidos y dos investigaciones abiertas", x: 76, y: 78,
+      p: "La AITAT investiga la parte técnica y un juzgado de Orgaz la judicial, con secreto de sumario. Todavía no se sabe por qué se dio la orden ni por qué falló el LZB." }
+  ];
+  function trainEl(cls, label, left) {
+    return '<span class="train ' + cls + '" style="left:' + left + '%">' + label + "</span>";
+  }
+  function showEvent(i) {
+    var e = EVENTS[i];
+    $("ev-time").textContent = e.t;
+    var bd = $("ev-badge"); bd.className = "badge " + e.b[0]; bd.textContent = e.b[1];
+    $("ev-title").textContent = e.h;
+    $("ev-text").textContent = e.p;
+    var crash = i >= 5;
+    $("rail").innerHTML = trainEl("I", "Iryo", 78) + trainEl(crash ? "A crash" : "A", "AVE", e.x);
+  }
+  $("scrub").addEventListener("input", function (ev) { showEvent(+ev.target.value); });
+  showEvent(0);
+
+  /* ---------- Parte 2: capas ---------- */
+  var LAYERS = [
+    { n: "Señales y tramos", d: "Cada tramo de vía admite un solo tren. Las señales de al lado indican si el siguiente está libre.", ok: true, f: true },
+    { n: "LZB (cable en la vía)", d: "Vigila continuamente la velocidad y la distancia, y frena el tren si hace falta.", ok: true, f: false },
+    { n: "ASFA (balizas)", d: "Solo vigila en puntos concretos: junto a las señales y unos 300 m antes. Entre medias no mira la distancia con otros trenes.", ok: true, f: true },
+    { n: "Personas: control y maquinistas", d: "Dan permisos, comprueban que la vía está libre y deciden cómo reanudar. Es la capa más flexible y la más expuesta al error.", ok: true, f: true }
+  ];
+  function renderLayers(failed) {
+    $("layers").innerHTML = LAYERS.map(function (l) {
+      var on = failed ? l.f : true;
+      return '<div class="layer ' + (on ? "" : "off") + '"><h3>' + l.n + '</h3><span class="badge ' + (on ? "b-ok" : "b-bad") + '">' + (on ? "Activa" : "Caída") + "</span><p>" + l.d + "</p></div>";
+    }).join("");
+    var s = $("layer-say");
+    s.className = "say " + (failed ? "bad" : "ok");
+    s.textContent = failed
+      ? "Sin el LZB, la vigilancia continua desaparece. Quedan las señales, las balizas (que solo miran en ciertos puntos) y las personas. En ese momento una orden equivocada ya no tiene una barrera automática que la frene. Aquí es donde encaja la guarda."
+      : "Con todo funcionando, varias capas se cubren entre sí. Si una persona se equivoca, el LZB sigue vigilando.";
+    $("l-ok").setAttribute("aria-pressed", String(!failed));
+    $("l-fail").setAttribute("aria-pressed", String(failed));
+  }
+  $("l-ok").addEventListener("click", function () { renderLayers(false); });
+  $("l-fail").addEventListener("click", function () { renderLayers(true); });
+  renderLayers(false);
+
+  /* ---------- Parte 3: simulador ---------- */
+  var N = 6, S, timer = null;
+  var NAME = { A: "AVE", I: "Iryo" };
+  function fresh() {
+    return { lzb: true, pos: { A: 1, I: 3 }, moving: { A: true, I: true }, auth: { A: "none", I: "none" }, collision: false, log: [] };
+  }
+  function others(t) { return t === "A" ? "I" : "A"; }
+  function occupied(cell, t) { return cell <= N && S.pos[others(t)] === cell; }
+  function trainAhead(t) { var u = others(t); return S.pos[u] > S.pos[t] && S.pos[u] <= N; }
+  function say(msg, kind) { var e = $("say"); e.textContent = msg; e.className = "say" + (kind ? " " + kind : ""); }
+  function logit(m) { S.log.push(m); }
+
+  function render() {
+    var h = "";
+    for (var c = 1; c <= N; c++) {
+      var inner = "";
+      ["A", "I"].forEach(function (t) {
+        if (S.pos[t] === c) inner += '<span class="train ' + t + (S.collision ? " crash" : "") + '">' + NAME[t] + (S.moving[t] ? " ▶" : " ■") + "</span>";
+      });
+      h += '<div class="cell"><small>Tramo ' + c + "</small>" + inner + "</div>";
+    }
+    $("track").innerHTML = h;
+    $("lzb-state").innerHTML = '<span class="lamp" style="background:' + (S.lzb ? "var(--ok)" : "var(--bad)") + '"></span>LZB: <strong>' + (S.lzb ? "operativo" : "caído (modo degradado)") + "</strong>" + (S.collision ? ' <span class="badge b-bad">Colisión simulada</span>' : "");
+    $("log").innerHTML = S.log.map(function (m) { return "<li>" + m + "</li>"; }).join("");
+    var busy = timer !== null;
+    $("b-fail").disabled = busy || !S.lzb || S.collision;
+    $("b-normal").disabled = busy || S.collision;
+    $("b-sight").disabled = busy || S.collision;
+    $("b-iryo").disabled = busy || S.collision;
+    $("b-tick").disabled = busy || S.collision;
+    $("b-auto-off").disabled = busy; $("b-auto-on").disabled = busy;
+  }
+
+  function tick() {
+    if (S.collision) return;
+    ["A", "I"].forEach(function (t) {
+      if (!S.moving[t] || S.pos[t] > N) return;
+      var nxt = S.pos[t] + 1;
+      if ((S.lzb || S.auth[t] === "sight") && occupied(nxt, t)) {
+        S.moving[t] = false; S.auth[t] = "none";
+        var why = S.lzb ? "el LZB lo frena" : "el maquinista ve el tren de delante y frena a tiempo, porque va despacio";
+        logit(NAME[t] + " se detiene: " + why + ".");
+        say(NAME[t] + " se detiene antes de llegar al otro tren: " + why + ".", "ok");
+        return;
+      }
+      S.pos[t] = nxt;
+      if (nxt > N) { S.moving[t] = false; S.auth[t] = "none"; logit(NAME[t] + " sale del tramo."); say(NAME[t] + " sale del tramo sin problema.", "ok"); return; }
+      if (occupied(nxt, t)) {
+        S.collision = true;
+        logit("Colisión simulada: " + NAME[t] + " entra en el tramo " + nxt + ", ocupado por el otro tren.");
+        say("Colisión simulada. A velocidad normal no hay nada que vigile la distancia entre una baliza y la siguiente, y el tren llegó al otro sin poder frenar. Prueba de nuevo activando la guarda.", "bad");
+      } else if (S.auth[t] === "normal") {
+        say(NAME[t] + " avanza a velocidad normal. Todavía no ha chocado, pero no se puede detener a tiempo si encuentra un obstáculo.", "bad");
+      }
+    });
+  }
+
+  function failLZB() {
+    if (!S.lzb || S.collision) return;
+    S.lzb = false; S.moving.A = false; S.moving.I = false;
+    logit("Cae el LZB: todos los trenes se detienen.");
+    say("Cae el LZB y los dos trenes se paran. Ahora el control debe decidir cómo reanudar la marcha. El Iryo sigue parado delante del AVE.");
+  }
+
+  function authorize(t, mode) {
+    var reasons = [];
+    if (S.lzb) reasons.push("El LZB está operativo; aún no hace falta autorizar nada. Pulsa \"1. Cae el LZB\".");
+    else if (S.moving[t]) reasons.push(NAME[t] + " ya está en marcha.");
+    else if (S.pos[t] > N) reasons.push(NAME[t] + " ya salió del tramo.");
+    if (reasons.length) { say(reasons[0]); return; }
+    if (mode === "normal" && $("guard").checked && trainAhead(t)) {
+      logit("La guarda bloquea la marcha normal del " + NAME[t] + ".");
+      say("Autorización bloqueada por la guarda: hay un tren por delante en el mismo tramo y no se ha confirmado que esté libre. Solo se permite la marcha a la vista (40 km/h). Es una segunda comprobación automática, justo donde un error humano sería más peligroso.", "ok");
+      return;
+    }
+    S.moving[t] = true; S.auth[t] = mode;
+    logit("El control autoriza al " + NAME[t] + " en marcha " + (mode === "sight" ? "a la vista" : "normal") + ".");
+    say(mode === "sight"
+      ? "Autorizado a la vista: el " + NAME[t] + " avanzará despacio. Pulsa \"Avanzar un instante\"."
+      : "Autorizado en marcha normal. Pulsa \"Avanzar un instante\" y observa qué pasa.", mode === "sight" ? "" : "bad");
+  }
+
+  function reset() { clearInterval(timer); timer = null; S = fresh(); say("Los dos trenes circulan con el LZB operativo. Pulsa \"1. Cae el LZB\" para empezar."); render(); }
+
+  function autoplay(guard) {
+    reset(); $("guard").checked = guard;
+    var steps = [failLZB, function () { authorize("A", "normal"); }, tick, tick, tick, tick];
+    var i = 0;
+    timer = setInterval(function () {
+      if (i >= steps.length || S.collision) { clearInterval(timer); timer = null; render(); return; }
+      steps[i++](); render();
+    }, 1100);
+    render();
+  }
+
+  $("b-fail").addEventListener("click", function () { failLZB(); render(); });
+  $("b-normal").addEventListener("click", function () { authorize("A", "normal"); render(); });
+  $("b-sight").addEventListener("click", function () { authorize("A", "sight"); render(); });
+  $("b-iryo").addEventListener("click", function () { authorize("I", "sight"); render(); });
+  $("b-tick").addEventListener("click", function () { tick(); render(); });
+  $("b-reset").addEventListener("click", reset);
+  $("b-auto-off").addEventListener("click", function () { autoplay(false); });
+  $("b-auto-on").addEventListener("click", function () { autoplay(true); });
+  reset();
+})();
+</script>
