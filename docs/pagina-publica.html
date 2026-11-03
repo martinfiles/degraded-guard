@@ -631,7 +631,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   $("scrub").addEventListener("input", function (ev) { showEvent(+ev.target.value); });
 
   /* ---------- Lógica del simulador ---------- */
-  var N = 6, SL = 10, S, busy = false, lastSay = null, outs = [];
+  var N = 6, SL = 10, S, busy = false, pend = false, lastSay = null, outs = [];
   var NAME = { A: "AVE", I: "Iryo" };
   function fresh() { return { lzb: true, pos: { A: 1, I: 4 }, moving: { A: false, I: false }, auth: { A: "none", I: "none" }, collision: false, log: [] }; }
   function other(t) { return t === "A" ? "I" : "A"; }
@@ -665,9 +665,10 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
     $("lzb-state").innerHTML = '<span class="lamp" style="background:' + (S.lzb ? "var(--ok)" : "var(--bad)") + '"></span>LZB: <strong>' + (S.lzb ? L(["operativo", "working"]) : L(["caído", "down"])) + "</strong>" + (S.collision ? ' <span class="badge b-bad">' + L(["Colisión simulada", "Simulated collision"]) + "</span>" : "");
     $("log").innerHTML = S.log.map(function (m) { return "<li>" + L(m) + "</li>"; }).join("");
     $("hud").innerHTML = "AVE: " + stateLabel("A") + "<br>Iryo: " + stateLabel("I");
-    $("b-fail").disabled = busy || !S.lzb || S.collision;
-    ["b-normal", "b-sight", "b-iryo"].forEach(function (id) { $(id).disabled = busy || S.collision; });
-    $("b-auto-off").disabled = busy; $("b-auto-on").disabled = busy;
+    var lock = busy || pend;
+    $("b-fail").disabled = lock || !S.lzb || S.collision;
+    ["b-normal", "b-sight", "b-iryo"].forEach(function (id) { $(id).disabled = lock || S.collision; });
+    $("b-auto-off").disabled = lock; $("b-auto-on").disabled = lock;
     sync3d();
   }
 
@@ -716,10 +717,20 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
     if (S.lzb) { say(["El LZB funciona todavía. Pulsa \"1. Cae el LZB\".", "The LZB still works. Press \"1. LZB fails\"."]); return; }
     if (S.moving[t]) { say([X + " ya está en marcha.", X + " is already moving."]); return; }
     if (S.pos[t] > N) { say([X + " ya salió del tramo.", X + " has already left the section."]); return; }
+    if (pend) return;
     if (mode === "normal" && $("guard").checked && trainAhead(t)) {
-      logit(["La Guarda bloquea la marcha normal del " + X + ".", "The Guard blocks normal running for the " + X + "."]);
-      say(["ORDEN BLOQUEADA por la Guarda: hay un tren delante en el mismo tramo sin confirmar libre. Solo se permite la marcha a la vista (máx. 40 km/h).", "ORDER BLOCKED by the Guard: there is a train ahead in the same section, not confirmed clear. Only proceed on sight is allowed (max. 40 km/h)."], "ok");
-      flash(["ORDEN BLOQUEADA POR LA GUARDA", "ORDER BLOCKED BY THE GUARD"], "ok");
+      pend = true;
+      logit(["El control ordena al " + X + " avanzar en marcha normal.", "The control centre orders the " + X + " to run at normal speed."]);
+      say(["El control ordena al " + X + " avanzar en marcha normal… La Guarda lo está comprobando.", "The control centre orders the " + X + " to run at normal speed… The Guard is checking it."], "bad");
+      flash(["ORDEN: " + X.toUpperCase() + " EN MARCHA NORMAL", "ORDER: " + X.toUpperCase() + " AT NORMAL SPEED"]);
+      render();
+      outs.push(setTimeout(function () {
+        pend = false;
+        logit(["La Guarda bloquea la marcha normal del " + X + ".", "The Guard blocks normal running for the " + X + "."]);
+        say(["ORDEN BLOQUEADA por la Guarda: hay un tren delante en el mismo tramo sin confirmar libre. Solo se permite la marcha a la vista (máx. 40 km/h).", "ORDER BLOCKED by the Guard: there is a train ahead in the same section, not confirmed clear. Only proceed on sight is allowed (max. 40 km/h)."], "ok");
+        flash(["ORDEN BLOQUEADA POR LA GUARDA", "ORDER BLOCKED BY THE GUARD"], "ok");
+        render();
+      }, 1600));
       return;
     }
     S.moving[t] = true; S.auth[t] = mode;
@@ -734,7 +745,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 
   function clearOuts() { outs.forEach(clearTimeout); outs = []; }
   function reset() {
-    clearOuts(); busy = false; S = fresh(); G.snap = true; G.crashed = false;
+    clearOuts(); busy = false; pend = false; S = fresh(); G.snap = true; G.crashed = false;
     say(["El AVE espera en el tramo 1 y el Iryo está parado en el 4. Pulsa \"1. Cae el LZB\" para empezar.", "The AVE waits in section 1 and the Iryo is stopped in section 4. Press \"1. LZB fails\" to start."]);
     render();
   }
