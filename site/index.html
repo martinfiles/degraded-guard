@@ -963,5 +963,15 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   var h0 = location.hash.replace("#", ""), start = 0;
   for (var si = 0; si < STEPS.length; si++) if (STEPS[si].id === h0) start = si;
   goStep(start, false);
+  /* Al abrir el enlace, la web empieza siempre arriba del todo */
+  try { history.scrollRestoration = "manual"; } catch (e) {}
+  var touched = false;
+  ["wheel", "touchstart", "keydown", "mousedown"].forEach(function (ev) { window.addEventListener(ev, function () { touched = true; }, { passive: true, once: true }); });
+  function toTop() { if (!touched) window.scrollTo(0, 0); }
+  toTop();
+  window.addEventListener("load", toTop);
+  window.addEventListener("pageshow", toTop);
+  setTimeout(toTop, 400);
+  setTimeout(toTop, 1200);
 })();
 </script>
