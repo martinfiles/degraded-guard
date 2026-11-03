@@ -1,0 +1,961 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Prototipo de investigación: un modelo formal del modo degradado ferroviario y una guarda que bloquea órdenes peligrosas. Simulador 3D interactivo.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Guarda del Modo Degradado">
+<meta property="og:description" content="¿Qué pasa cuando cae el sistema automático y todo depende de una decisión humana? Investigación con modelo formal (TLA+) y simulador 3D.">
+<style>:root{color-scheme:light;padding-block:env(safe-area-inset-top,0px) env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Guarda del Modo Degradado</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Concepto: señalización ferroviaria. Azul marino sobre blanco, rojo de señal reservado para la Guarda y los avisos. */
+:root {
+  --bg: #f6f7fb;
+  --panel: #ffffff;
+  --fg: #14213d;
+  --muted: #55607a;
+  --line: #d3d9e6;
+  --accent: #14213d;
+  --on-accent: #ffffff;
+  --signal: #d7263d;
+  --on-signal: #ffffff;
+  --iryo: #7d8cab;
+  --warn: #a35a00;
+  --ok: #1a7f4e;
+  --bad: #b3162d;
+  --ok-bg: #dff1e8;
+  --signal-bg: #fbe3e6;
+  --warn-bg: #fbecd2;
+  --bad-bg: #fbe3e6;
+  --track: #e2e7f1;
+  --font-display: "Unbounded", "Arial Black", sans-serif;
+  --font-body: "Figtree", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0b1226; --panel: #141d38; --fg: #eaf0ff; --muted: #9aa8c7; --line: #26335a;
+    --accent: #8fb4ff; --on-accent: #0b1226; --signal: #ff5568; --on-signal: #1a0509; --iryo: #8794b3;
+    --warn: #f0b44a; --ok: #4fd18b; --bad: #ff7a89; --ok-bg: #0f3324; --signal-bg: #3d1420; --warn-bg: #3a2a08; --bad-bg: #3d1420; --track: #1c2850; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0b1226; --panel: #141d38; --fg: #eaf0ff; --muted: #9aa8c7; --line: #26335a;
+    --accent: #8fb4ff; --on-accent: #0b1226; --signal: #ff5568; --on-signal: #1a0509; --iryo: #8794b3;
+    --warn: #f0b44a; --ok: #4fd18b; --bad: #ff7a89; --ok-bg: #0f3324; --signal-bg: #3d1420; --warn-bg: #3a2a08; --bad-bg: #3d1420; --track: #1c2850; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 17px; line-height: 1.55; }
+.wrap { max-width: 860px; margin: 0 auto; padding-block: 28px 72px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 56px; }
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(30px, 7vw, 52px); line-height: 1.08; letter-spacing: -.01em; }
+h2 { font-family: var(--font-display); font-weight: 500; font-size: clamp(22px, 4.2vw, 30px); line-height: 1.15; }
+h3 { font-family: var(--font-body); font-weight: 600; font-size: 18px; line-height: 1.25; }
+p { margin: 0; max-width: 62ch; }
+section { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.lead { font-size: 19px; color: var(--muted); }
+.tag { font-family: var(--font-mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--signal); }
+.notice { border: 1px solid var(--warn); background: var(--warn-bg); padding: 12px 14px; border-radius: 10px; font-size: 15px; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+button { font: inherit; cursor: pointer; }
+:focus-visible { outline: 3px solid var(--signal); outline-offset: 2px; }
+.btn { border: 1px solid var(--line); background: var(--panel); color: var(--fg); padding: 10px 14px; border-radius: 99px; font-size: 14px; font-weight: 500; min-height: 44px; }
+.btn:hover:not(:disabled) { border-color: var(--accent); }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+.btn.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.btn.danger { border-color: var(--bad); color: var(--bad); }
+.row { display: flex; flex-wrap: wrap; gap: 8px; }
+.badge { display: inline-block; font-family: var(--font-mono); font-size: 11px; padding: 2px 9px; border-radius: 99px; border: 1px solid currentColor; white-space: nowrap; }
+.b-ok { color: var(--ok); background: var(--ok-bg); } .b-warn { color: var(--warn); background: var(--warn-bg); } .b-bad { color: var(--bad); background: var(--bad-bg); }
+.time { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 14px; }
+figure { margin: 0; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+figcaption { font-size: 14px; color: var(--muted); max-width: 62ch; }
+svg { max-width: 100%; height: auto; display: block; color: var(--fg); }
+svg text { font-family: var(--font-body); fill: currentColor; }
+.t-mono { font-family: var(--font-mono); }
+.f-acc { fill: var(--accent); } .f-sig { fill: var(--signal); } .f-bad { fill: var(--bad); } .f-ok { fill: var(--ok); } .f-panel { fill: var(--panel); } .f-track { fill: var(--track); }
+.s-line { stroke: var(--line); } .s-acc { stroke: var(--accent); } .s-sig { stroke: var(--signal); } .s-bad { stroke: var(--bad); } .s-ok { stroke: var(--ok); } .s-fg { stroke: var(--fg); }
+.txt-on-acc { fill: var(--on-accent); } .txt-on-sig { fill: var(--on-signal); } .txt-bad { fill: var(--bad); } .txt-ok { fill: var(--ok); } .txt-muted { fill: var(--muted); }
+
+/* tarjetas de idea */
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
+.card { border: 1px solid var(--line); border-radius: 14px; padding: 16px; background: var(--panel); display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.card svg { width: 64px; height: 64px; }
+.card p { font-size: 15px; color: var(--muted); }
+.big { font-family: var(--font-display); font-weight: 700; font-size: 32px; line-height: 1; }
+
+/* herramienta */
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; align-items: start; }
+.flow { max-width: 420px; margin: 0 auto; width: 100%; }
+.mock { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--panel); font-size: 14px; }
+.mock-h { background: var(--accent); color: var(--on-accent); padding: 8px 12px; font-family: var(--font-mono); font-size: 12px; }
+.mock-b { padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.order { font-family: var(--font-mono); font-size: 13px; padding: 8px 10px; background: var(--track); border-radius: 8px; }
+.blocked { border: 2px solid var(--bad); background: var(--bad-bg); border-radius: 10px; padding: 10px 12px; }
+.blocked strong { color: var(--bad); }
+.yn { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.yn ul { margin: 6px 0 0; padding-left: 18px; font-size: 15px; display: flex; flex-direction: column; gap: 4px; }
+.yn .card.is h3 { color: var(--ok); } .yn .card.isnt h3 { color: var(--bad); }
+
+/* timeline */
+.scrub { width: 100%; accent-color: var(--signal); min-height: 32px; }
+.ev-title { font-weight: 600; font-size: 20px; line-height: 1.25; }
+.stage { min-height: 130px; display: flex; flex-direction: column; gap: 8px; }
+
+/* capas / sim */
+.seg { display: flex; border: 1px solid var(--line); border-radius: 99px; overflow: hidden; background: var(--panel); }
+.seg button { flex: 1; border: 0; background: transparent; color: var(--fg); padding: 10px 8px; min-height: 44px; font-weight: 500; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+.say { border-left: 5px solid var(--accent); background: var(--panel); padding: 12px 14px; border-radius: 0 10px 10px 0; min-height: 72px; font-size: 16px; }
+.say.bad { border-color: var(--bad); background: var(--bad-bg); }
+.say.ok { border-color: var(--ok); background: var(--ok-bg); }
+.switch { display: flex; align-items: center; gap: 10px; min-height: 44px; font-weight: 500; }
+.switch input { width: 22px; height: 22px; accent-color: var(--signal); }
+.status { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; font-size: 15px; }
+.lamp { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+.track { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; }
+.cell { background: var(--track); border-radius: 8px; min-height: 84px; padding: 6px 3px; display: flex; flex-direction: column; align-items: center; gap: 6px; border-bottom: 4px solid var(--muted); }
+.cell small { font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
+.train { font-size: 13px; font-weight: 600; padding: 2px 6px; border-radius: 6px; text-align: center; line-height: 1.3; }
+.train.A { background: var(--accent); color: var(--on-accent); } .train.I { background: var(--iryo); color: #fff; }
+.train.crash { background: var(--bad); color: #fff; animation: shake .4s 2; }
+@keyframes shake { 25% { transform: translateX(-3px); } 75% { transform: translateX(3px); } }
+@media (prefers-reduced-motion: reduce) { .train.crash { animation: none; } }
+ol.log { margin: 0; padding-left: 20px; font-size: 14px; color: var(--muted); }
+
+/* tabla y detalles */
+.tw { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); }
+table { border-collapse: collapse; width: 100%; min-width: 520px; font-size: 15px; }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-family: var(--font-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+tr:last-child td { border-bottom: 0; }
+details { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); padding: 10px 14px; }
+summary { cursor: pointer; font-weight: 600; min-height: 28px; }
+details p, details li { margin-top: 8px; font-size: 15px; }
+a { color: var(--accent); }
+ul.src { font-size: 14px; display: flex; flex-direction: column; gap: 6px; padding-left: 18px; margin: 0; }
+.bar { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+footer { font-size: 13px; color: var(--muted); }
+.steps { margin: 8px 0 0; padding-left: 20px; font-size: 15px; }
+
+/* Navegación por pasos */
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 20; background: var(--bg); }
+.stepnav { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 15; background: var(--bg); border-bottom: 1px solid var(--line); margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px))); padding-inline: max(16px, env(safe-area-inset-left, 0px)); }
+.stepscroll { display: flex; gap: 6px; overflow-x: auto; padding-block: 8px; scrollbar-width: none; }
+.stepscroll::-webkit-scrollbar { display: none; }
+.stp { flex: 1 0 auto; display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--fg); border-radius: 99px; padding: 6px 14px 6px 6px; min-height: 44px; font-size: 14px; font-weight: 500; white-space: nowrap; }
+.stp .n { width: 28px; height: 28px; border-radius: 50%; background: var(--track); display: grid; place-items: center; font-family: var(--font-mono); font-size: 13px; font-weight: 500; }
+.stp[aria-current="step"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.stp[aria-current="step"] .n { background: var(--signal); color: var(--on-signal); }
+#steps { scroll-margin-top: 72px; display: flex; flex-direction: column; gap: 0; min-width: 0; }
+.step { display: flex; flex-direction: column; gap: 48px; min-width: 0; }
+.next { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding-top: 8px; border-top: 1px solid var(--line); }
+
+/* Simulador 3D */
+.sim { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.view { scroll-margin-top: 76px; position: relative; border-radius: 14px; overflow: hidden; background: var(--track); border: 1px solid var(--line); aspect-ratio: 16 / 9; min-height: 240px; }
+@media (max-width: 560px) { .view { aspect-ratio: 4 / 3; } }
+.view canvas { width: 100%; height: 100%; display: block; touch-action: pan-y; cursor: grab; }
+.lab { position: absolute; left: 0; top: 0; font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 99px; pointer-events: none; white-space: nowrap; transform: translate(-50%, -100%); }
+.lab.A { background: var(--accent); color: var(--on-accent); } .lab.I { background: var(--iryo); color: #fff; }
+.hud { position: absolute; left: 8px; top: 8px; font-family: var(--font-mono); font-size: 11px; line-height: 1.5; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; max-width: 70%; opacity: .94; }
+.flash { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); background: var(--bad); color: #fff; font-weight: 700; font-size: 14px; padding: 8px 14px; border-radius: 10px; pointer-events: none; text-align: center; max-width: 90%; }
+.flash.ok { background: var(--ok); color: #fff; }
+.viewbtns { position: absolute; right: 8px; bottom: 8px; display: flex; gap: 6px; }
+.btn.sm { min-height: 36px; padding: 6px 12px; font-size: 13px; background: var(--panel); }
+.nogl { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 16px; margin: 0; max-width: none; background: var(--track); }
+.hint { font-size: 13px; color: var(--muted); }
+.ctrl { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: var(--panel); }
+.ctrl-h { background: var(--accent); color: var(--on-accent); padding: 8px 14px; font-family: var(--font-mono); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; }
+.ctrl-b { padding: 14px; display: flex; flex-direction: column; gap: 14px; }
+.ctrl-step { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+[hidden] { display: none !important; }
+</style>
+
+<!-- símbolos reutilizables -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="train" viewBox="0 0 220 60">
+      <path d="M4 8 Q4 4 8 4 H150 Q192 4 211 40 L217 54 H4 Z" fill="currentColor"/>
+      <rect x="16" y="14" width="22" height="13" rx="3" style="fill:var(--panel)"/>
+      <rect x="48" y="14" width="22" height="13" rx="3" style="fill:var(--panel)"/>
+      <rect x="80" y="14" width="22" height="13" rx="3" style="fill:var(--panel)"/>
+      <rect x="112" y="14" width="22" height="13" rx="3" style="fill:var(--panel)"/>
+      <path d="M150 14 H160 Q176 16 188 36 H150 Z" style="fill:var(--panel)"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+
+<header style="display:flex;flex-direction:column;gap:18px">
+  <div class="bar" data-noi18n><button class="btn" id="bt-lang" type="button">EN</button><button class="btn" id="bt-theme" type="button">Tema</button></div>
+  <span class="tag">Proyecto abierto · datos a 2 nov 2026</span>
+  <h1>Una barrera para que un error humano no baste</h1>
+  <p class="lead">El 28 de octubre murieron 69 personas cerca de Toledo. Proponemos una herramienta simple para el momento más delicado: cuando el sistema principal falla y las órdenes dependen de una persona.</p>
+
+  <figure>
+    <svg viewBox="0 0 720 150" role="img" aria-label="Un tren en marcha detrás de otro tren detenido sobre la misma vía">
+      <rect x="0" y="108" width="720" height="6" class="f-track"/>
+      <g class="s-line" stroke-width="2"><path d="M20 114v10M70 114v10M120 114v10M170 114v10M220 114v10M270 114v10M320 114v10M370 114v10M420 114v10M470 114v10M520 114v10M570 114v10M620 114v10M670 114v10"/></g>
+      <use href="#train" x="20" y="54" width="220" height="60" style="color:var(--accent)"/>
+      <use href="#train" x="470" y="54" width="220" height="60" style="color:var(--iryo)"/>
+      <g class="s-acc" stroke-width="3" stroke-linecap="round"><path d="M250 74h60M262 88h70M254 100h50"/></g>
+      <text x="20" y="40" font-size="14" font-weight="600">AVE · en marcha</text>
+      <text x="470" y="40" font-size="14" font-weight="600">Iryo · parado delante</text>
+    </svg>
+  </figure>
+
+  <div class="notice"><strong>Prototipo de investigación.</strong> No es un sistema real ni certificado y no señala culpables: la investigación oficial sigue abierta y casi todo es provisional. Recuerdo y respeto para las víctimas.</div>
+</header>
+
+<nav class="stepnav" id="stepnav" aria-label="Pasos de la página" data-noi18n><div class="stepscroll" id="stepscroll"></div></nav>
+
+<main id="steps">
+<div class="step" id="step-que-paso" hidden>
+<section id="que-paso">
+  <span class="tag">Qué pasó</span>
+  <h2>Los hechos, paso a paso</h2>
+  <div class="panel">
+    <svg id="rail" viewBox="0 0 720 96" role="img" aria-label="Posición de los dos trenes en cada momento (no está a escala)">
+      <rect x="0" y="74" width="720" height="5" class="f-track"/>
+      <use id="r-iryo" href="#train" x="470" y="26" width="220" height="60" style="color:var(--iryo)"/>
+      <use id="r-ave" href="#train" x="20" y="26" width="220" height="60" style="color:var(--accent)"/>
+      <g id="r-boom" visibility="hidden"><path d="M470 30l-10-14 14 6 6-16 6 16 14-6-10 14z" class="f-bad"/></g>
+    </svg>
+    <label for="scrub" class="tag" style="color:var(--muted)">Desliza para avanzar</label>
+    <input type="range" id="scrub" class="scrub" min="0" max="6" step="1" value="0">
+    <div class="stage" aria-live="polite">
+      <div class="row" style="align-items:center"><span class="time" id="ev-time"></span><span class="badge" id="ev-badge"></span></div>
+      <div class="ev-title" id="ev-title"></div>
+      <p id="ev-text"></p>
+    </div>
+  </div>
+  <p style="font-size:14px;color:var(--muted)">Las horas varían entre fuentes (el fallo se sitúa entre las 08:30 y las 08:32).</p>
+</section>
+<div class="next" id="next-que-paso" data-noi18n></div>
+</div>
+
+<div class="step" id="step-idea" hidden>
+<section id="idea">
+  <span class="tag">La idea en 10 segundos</span>
+  <h2>Problema, herramienta, resultado</h2>
+  <div class="cards">
+    <div class="card">
+      <svg viewBox="0 0 64 64" role="img" aria-label="Señal que falla"><circle cx="32" cy="32" r="26" fill="none" class="s-bad" stroke-width="4"/><path d="M20 20l24 24M44 20L20 44" class="s-bad" stroke-width="4" stroke-linecap="round"/></svg>
+      <h3>El problema</h3>
+      <p>Cuando cae el LZB, el sistema que vigila a los trenes, todo depende de las órdenes de una persona. Si se equivoca, nada la frena.</p>
+    </div>
+    <div class="card">
+      <svg viewBox="0 0 64 64" role="img" aria-label="Escudo con una marca de verificación"><path d="M32 6l22 8v16c0 14-9 24-22 28C19 54 10 44 10 30V14z" class="f-sig"/><path d="M21 32l8 8 15-17" fill="none" class="s-fg" stroke="var(--on-signal)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <h3>La herramienta</h3>
+      <p>La <strong>Guarda</strong> revisa cada orden antes de enviarla. Si hay un tren delante sin confirmar libre, bloquea la marcha normal.</p>
+    </div>
+    <div class="card">
+      <svg viewBox="0 0 64 64" role="img" aria-label="Dos trenes que se detienen a distancia"><rect x="6" y="30" width="22" height="14" rx="4" class="f-acc"/><rect x="36" y="30" width="22" height="14" rx="4" class="f-sig"/><path d="M6 50h52" class="s-line" stroke-width="3" stroke-linecap="round"/><path d="M30 16v8M32 12v12M34 16v8" class="s-ok" stroke-width="3" stroke-linecap="round" fill="none"/></svg>
+      <h3>El resultado</h3>
+      <p>En el modelo, con la Guarda los dos trenes siempre salen sin chocar, y el servicio no se bloquea.</p>
+    </div>
+  </div>
+</section>
+
+<section id="herramienta">
+  <span class="tag">La herramienta</span>
+  <h2>La Guarda: un segundo par de ojos</h2>
+  <p>Es un programa que se coloca entre el control y los trenes. No da órdenes ni sustituye a nadie. Solo hace una pregunta antes de dejar pasar una orden.</p>
+
+  <div class="two">
+    <figure class="flow">
+      <svg viewBox="0 0 360 400" role="img" aria-label="Flujo: el control envía una orden, la Guarda pregunta si hay un tren delante sin confirmar libre; si no, permite; si sí, bloquea la marcha normal y ofrece la marcha a la vista">
+        <defs><marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+        <rect x="70" y="8" width="220" height="48" rx="12" class="f-panel s-line" stroke-width="2"/>
+        <text x="180" y="30" font-size="13" font-weight="600" text-anchor="middle">Control</text>
+        <text x="180" y="47" font-size="12" text-anchor="middle" class="txt-muted">orden: AVE, marcha normal</text>
+        <path d="M180 56V92" stroke="currentColor" stroke-width="2" marker-end="url(#ar)"/>
+        <text x="190" y="80" font-size="11" class="txt-muted">envía</text>
+        <path d="M180 94L290 160L180 226L70 160Z" class="f-sig"/>
+        <text x="180" y="150" font-size="13" font-weight="700" text-anchor="middle" class="txt-on-sig">GUARDA</text>
+        <text x="180" y="168" font-size="11.5" text-anchor="middle" class="txt-on-sig">¿hay un tren delante</text>
+        <text x="180" y="183" font-size="11.5" text-anchor="middle" class="txt-on-sig">sin confirmar libre?</text>
+        <path d="M110 194L70 260" stroke="currentColor" stroke-width="2" fill="none" marker-end="url(#ar)"/>
+        <text x="62" y="236" font-size="12" font-weight="700" text-anchor="end" class="txt-ok">NO</text>
+        <path d="M250 194L290 260" stroke="currentColor" stroke-width="2" fill="none" marker-end="url(#ar)"/>
+        <text x="298" y="236" font-size="12" font-weight="700" class="txt-bad">SÍ</text>
+        <rect x="4" y="262" width="150" height="84" rx="12" class="f-ok"/>
+        <text x="79" y="292" font-size="13" font-weight="700" text-anchor="middle" class="txt-on-sig" style="fill:var(--bg)">Orden pasa</text>
+        <text x="79" y="312" font-size="12" text-anchor="middle" style="fill:var(--bg)">el tren avanza</text>
+        <rect x="206" y="262" width="150" height="124" rx="12" class="f-bad"/>
+        <text x="281" y="292" font-size="13" font-weight="700" text-anchor="middle" style="fill:#fff">Orden bloqueada</text>
+        <text x="281" y="314" font-size="12" text-anchor="middle" style="fill:#fff">Solo se permite</text>
+        <text x="281" y="330" font-size="12" text-anchor="middle" style="fill:#fff">marcha a la vista</text>
+        <text x="281" y="346" font-size="12" text-anchor="middle" style="fill:#fff">(máx. 40 km/h)</text>
+        <text x="281" y="372" font-size="11" text-anchor="middle" style="fill:#fff">+ aviso con el motivo</text>
+      </svg>
+      <figcaption>Una sola regla, aplicada en cada orden del modo degradado.</figcaption>
+    </figure>
+
+    <div style="display:flex;flex-direction:column;gap:12px;min-width:0">
+      <h3>Así se vería para el controlador</h3>
+      <div class="mock" role="img" aria-label="Ejemplo de pantalla con una orden bloqueada">
+        <div class="mock-h">PANEL DE CONTROL · MODO DEGRADADO (ejemplo)</div>
+        <div class="mock-b">
+          <div class="order">Orden: AVE 2080 → marcha normal</div>
+          <div class="blocked"><strong>ORDEN BLOQUEADA</strong><br>Iryo 6076 está parado delante, en el tramo 3, sin confirmar libre.</div>
+          <div>Alternativa permitida: <strong>marcha a la vista, máx. 40 km/h</strong></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h3 style="margin-top:8px">Con y sin la Guarda</h3>
+  <div class="two">
+    <figure>
+      <svg viewBox="0 0 320 130" role="img" aria-label="Sin Guarda: la orden del control llega directa al AVE y solo una persona puede detenerla">
+        <rect x="6" y="14" width="86" height="40" rx="10" class="f-panel s-line" stroke-width="2"/><text x="49" y="39" font-size="13" text-anchor="middle" font-weight="600">Control</text>
+        <path d="M92 34H152" stroke="currentColor" stroke-width="2" marker-end="url(#ar)"/><text x="100" y="26" font-size="11" class="txt-muted">orden</text>
+        <use href="#train" x="156" y="18" width="120" height="33" style="color:var(--accent)"/>
+        <path d="M276 34l30 0" class="s-bad" stroke-width="3" stroke-linecap="round" stroke-dasharray="2 6"/>
+        <text x="8" y="84" font-size="12" font-weight="600" class="txt-bad">Nada la frena si falla la persona</text>
+        <text x="8" y="104" font-size="12" class="txt-muted">1 barrera humana</text>
+      </svg>
+      <figcaption>Sin la Guarda: depende de una sola persona.</figcaption>
+    </figure>
+    <figure>
+      <svg viewBox="0 0 320 130" role="img" aria-label="Con Guarda: la orden pasa primero por la Guarda antes de llegar al AVE">
+        <rect x="6" y="14" width="70" height="40" rx="10" class="f-panel s-line" stroke-width="2"/><text x="41" y="39" font-size="13" text-anchor="middle" font-weight="600">Control</text>
+        <path d="M76 34H100" stroke="currentColor" stroke-width="2" marker-end="url(#ar)"/>
+        <rect x="102" y="10" width="76" height="48" rx="10" class="f-sig"/><text x="140" y="39" font-size="13" text-anchor="middle" font-weight="700" class="txt-on-sig">Guarda</text>
+        <path d="M178 34H198" stroke="currentColor" stroke-width="2" marker-end="url(#ar)"/>
+        <use href="#train" x="200" y="18" width="115" height="31" style="color:var(--accent)"/>
+        <text x="8" y="84" font-size="12" font-weight="600" class="txt-ok">Una orden peligrosa se detiene antes</text>
+        <text x="8" y="104" font-size="12" class="txt-muted">2 barreras: persona + Guarda</text>
+      </svg>
+      <figcaption>Con la Guarda: una segunda comprobación automática.</figcaption>
+    </figure>
+  </div>
+
+  <div class="yn">
+    <div class="card is"><h3>Qué es</h3><ul><li>Un aviso que bloquea una orden concreta</li><li>Una regla simple y comprobada</li><li>Un prototipo abierto para revisar</li></ul></div>
+    <div class="card isnt"><h3>Qué no es</h3><ul><li>No sustituye a controladores ni maquinistas</li><li>No es un sistema certificado</li><li>No afirma cuál fue la causa real</li></ul></div>
+  </div>
+</section>
+<div class="next" id="next-idea" data-noi18n></div>
+</div>
+
+<div class="step" id="step-pruebalo" hidden>
+<section id="simulador">
+  <span class="tag">Pruébalo tú</span>
+  <h2>Ponte en el puesto de control</h2>
+  <p>El AVE (azul marino) circula detrás del Iryo (gris azulado), que está parado. Cae el LZB y tú decides cómo reanudar la marcha. Activa o desactiva la Guarda y compara.</p>
+  <div class="sim">
+    <div class="view" id="viewbox">
+      <canvas id="cv" role="img" aria-label="Vista 3D de la vía con el AVE y el Iryo"></canvas>
+      <div id="labels" data-noi18n><span class="lab A" id="lab-A">AVE</span><span class="lab I" id="lab-I">Iryo</span></div>
+      <div class="hud" id="hud" data-noi18n></div>
+      <div class="flash" id="flash" hidden></div>
+      <div class="viewbtns">
+        <button class="btn sm" id="v-side" type="button">Lateral</button>
+        <button class="btn sm" id="v-top" type="button">Cenital</button>
+      </div>
+      <p class="nogl" id="nogl" hidden>Tu navegador no puede mostrar la vista 3D. Usa el mapa de tramos de abajo: la simulación funciona igual.</p>
+    </div>
+    <p class="hint">Arrastra sobre la vista 3D para girar la cámara.</p>
+
+    <div class="status">
+      <span id="lzb-state"></span>
+      <label class="switch" for="guard"><input type="checkbox" id="guard" checked> Guarda activada</label>
+    </div>
+    <div class="track" id="track" role="img" aria-label="Seis tramos de vía con los dos trenes"></div>
+    <div class="say" id="say" aria-live="polite"></div>
+
+    <div class="ctrl">
+      <div class="ctrl-h">Panel del control</div>
+      <div class="ctrl-b">
+        <div class="ctrl-step"><span class="tag" style="color:var(--muted)">Paso 1: provoca el fallo</span>
+          <button class="btn primary" id="b-fail" type="button">1. Cae el LZB</button></div>
+        <div class="ctrl-step"><span class="tag" style="color:var(--muted)">Paso 2: elige una orden</span>
+          <div class="row">
+            <button class="btn danger" id="b-normal" type="button">AVE: marcha normal</button>
+            <button class="btn" id="b-sight" type="button">AVE: a la vista</button>
+            <button class="btn" id="b-iryo" type="button">Iryo: a la vista</button>
+          </div></div>
+        <div class="ctrl-step"><span class="tag" style="color:var(--muted)">O mira el caso completo</span>
+          <div class="row">
+            <button class="btn" id="b-auto-off" type="button">Caso del 28-oct sin Guarda</button>
+            <button class="btn" id="b-auto-on" type="button">Mismo caso con Guarda</button>
+            <button class="btn" id="b-reset" type="button">Reiniciar</button>
+          </div></div>
+      </div>
+    </div>
+    <ol class="log" id="log"></ol>
+  </div>
+  <details><summary>¿Qué es "a la vista" y "normal"?</summary>
+    <p>A la vista el tren va despacio (máx. 40 km/h) y puede parar ante lo que vea. En marcha normal va a la velocidad de la línea, y entre balizas nada vigila la distancia con el tren de delante.</p></details>
+  <details><summary>Qué es esta simulación</summary>
+    <p>Una ilustración muy simplificada: dos trenes y seis tramos. Las distancias y velocidades no son reales. La lógica de la Guarda es la misma que se comprobó en el modelo matemático.</p></details>
+</section>
+<div class="next" id="next-pruebalo" data-noi18n></div>
+</div>
+
+<div class="step" id="step-modelo" hidden>
+<section id="modelo">
+  <span class="tag">Por qué funciona</span>
+  <h2>Sumar una barrera tapa el hueco</h2>
+  <figure>
+    <svg viewBox="0 0 360 164" role="img" aria-label="Cinco lonchas de queso con agujeros: una flecha atraviesa las cuatro primeras y la quinta, la Guarda, la detiene">
+      <g>
+        <rect x="14" y="14" width="44" height="120" rx="8" class="f-panel s-line" stroke-width="2"/><ellipse cx="36" cy="70" rx="11" ry="13" class="f-track"/><ellipse cx="36" cy="108" rx="7" ry="8" class="f-track"/>
+        <rect x="84" y="14" width="44" height="120" rx="8" class="f-panel s-bad" stroke-width="2" stroke-dasharray="5 4"/><ellipse cx="106" cy="70" rx="11" ry="13" class="f-track"/><ellipse cx="106" cy="36" rx="7" ry="8" class="f-track"/>
+        <rect x="154" y="14" width="44" height="120" rx="8" class="f-panel s-line" stroke-width="2"/><ellipse cx="176" cy="70" rx="11" ry="13" class="f-track"/><ellipse cx="176" cy="112" rx="8" ry="9" class="f-track"/>
+        <rect x="224" y="14" width="44" height="120" rx="8" class="f-panel s-line" stroke-width="2"/><ellipse cx="246" cy="70" rx="11" ry="13" class="f-track"/><ellipse cx="246" cy="32" rx="6" ry="7" class="f-track"/>
+        <rect x="294" y="14" width="44" height="120" rx="8" class="f-sig"/><ellipse cx="316" cy="32" rx="6" ry="7" class="f-panel"/><ellipse cx="316" cy="112" rx="6" ry="7" class="f-panel"/>
+      </g>
+      <path d="M2 70H290" class="s-bad" stroke-width="4" stroke-linecap="round"/><path d="M290 70l-10-7v14z" class="f-bad"/>
+      <g font-size="11.5" text-anchor="middle"><text x="36" y="154">Señales</text><text x="106" y="154" class="txt-bad">LZB (caído)</text><text x="176" y="154">ASFA</text><text x="246" y="154">Personas</text><text x="316" y="154" font-weight="700">Guarda</text></g>
+    </svg>
+    <figcaption>Cada capa tiene huecos. El peligro aparece cuando se alinean. La Guarda es una capa sin hueco en ese punto.<br>El error (flecha roja) cruza los huecos alineados hasta chocar con la Guarda.</figcaption>
+  </figure>
+
+  <h3>La prueba matemática</h3>
+  <p>Una herramienta llamada TLA+ revisa todas las combinaciones posibles de un modelo con dos trenes y seis tramos.</p>
+  <div class="cards">
+    <div class="card"><span class="badge b-ok">Seguro</span><div class="big">90</div><p>situaciones sin choque si se cumple el procedimiento (marcha a la vista).</p></div>
+    <div class="card"><span class="badge b-bad">Choque</span><div class="big">5 pasos</div><p>bastan para chocar si el control puede autorizar marcha normal con un tren delante.</p></div>
+    <div class="card"><span class="badge b-ok">Seguro</span><div class="big">124</div><p>situaciones sin choque con la Guarda, y ambos trenes siempre pueden salir.</p></div>
+  </div>
+  <details><summary>Los 5 pasos del choque</summary>
+    <ol class="steps"><li>Los dos trenes circulan con LZB.</li><li>Cae el LZB y ambos se detienen.</li><li>Se autoriza al AVE en marcha normal.</li><li>El AVE avanza un tramo.</li><li>Entra en el tramo del Iryo: choque.</li></ol></details>
+  <p><strong>Dato importante:</strong> si se sigue el procedimiento, el modelo ya es seguro. La Guarda importa solo cuando alguien se desvía, y bajo presión pasa. Además, el código de la Guarda se probó contra esos 5 pasos y bloquea justo el que lleva al choque.</p>
+</section>
+<div class="next" id="next-modelo" data-noi18n></div>
+</div>
+
+<div class="step" id="step-datos" hidden>
+<section id="datos">
+  <span class="tag">Transparencia</span>
+  <h2>Qué se sabe y qué no es público</h2>
+  <div class="tw"><table>
+    <thead><tr><th>Dato</th><th>Estado</th><th>Detalle</th></tr></thead>
+    <tbody>
+      <tr><td>69 fallecidos</td><td><span class="badge b-ok">Oficial</span></td><td>Provisional. Heridos: entre 100 y 179 según fuente.</td></tr>
+      <tr><td>Choque ~08:53, km 118, Madrid-Sevilla</td><td><span class="badge b-ok">Oficial</span></td><td>Ministerio y primer informe de la AITAT.</td></tr>
+      <tr><td>LZB cae ~22 min antes</td><td><span class="badge b-ok">Oficial</span></td><td>Primer informe AITAT. Tramo afectado: 63 a 90 km según fuente.</td></tr>
+      <tr><td>Debía ordenarse marcha a la vista</td><td><span class="badge b-ok">Oficial</span></td><td>Versión del ministerio. No hemos leído la norma exacta.</td></tr>
+      <tr><td>Velocidad del impacto</td><td><span class="badge b-warn">Estimada</span></td><td>160 a 200 km/h. Falta analizar las cajas negras.</td></tr>
+      <tr><td>Maquinista pidió pasar señal en rojo</td><td><span class="badge b-warn">Según medios</span></td><td>Sin fuente oficial.</td></tr>
+      <tr><td>Otro maquinista corrigió la orden; el Iryo avisó dos veces</td><td><span class="badge b-warn">Según el ministro</span></td><td>Sin verificar de forma independiente.</td></tr>
+      <tr><td>Trenes detenidos</td><td><span class="badge b-warn">Contradictorio</span></td><td>Seis o hasta ocho.</td></tr>
+      <tr><td>Causa del fallo del LZB</td><td><span class="badge b-bad">Se desconoce</span></td><td>Se habla de un fallo informático; sin causa confirmada.</td></tr>
+      <tr><td>Por qué se dio la orden</td><td><span class="badge b-bad">Se desconoce</span></td><td>Sumario judicial secreto.</td></tr>
+      <tr><td>Procedimiento interno de Adif ante la caída del LZB</td><td><span class="badge b-bad">No público</span></td><td>Base: Reglamento de Circulación (RD 664/2015). No hallamos el apartado concreto.</td></tr>
+      <tr><td>Audios del centro de control y cajas negras</td><td><span class="badge b-bad">No público</span></td><td>En manos de Guardia Civil y AITAT. Hay filtraciones sin verificar.</td></tr>
+      <tr><td>Informe final y resultado judicial</td><td><span class="badge b-bad">Pendiente</span></td><td>Juzgado nº 2 de Orgaz (Toledo).</td></tr>
+    </tbody></table></div>
+  <details><summary>Un aviso previo de 2024</summary>
+    <p>Según la prensa, la CIAF analizó en 2024 un incidente en Cuenca-Fernando Zóbel donde se reanudó la marcha por una comprobación humana de que la vía estaba libre, y advirtió de que es una barrera frágil. Adif dice que no rechazó sus recomendaciones. Las fuentes discrepan en cuántas eran (5 o 7) y en su estado.</p></details>
+  <details><summary>Debate laboral</summary>
+    <p>Los controladores de Adif han convocado huelga y su sindicato afirma que falta un 20 % de plantilla. Es una afirmación de una de las partes. Las responsabilidades las fijará la investigación, no este proyecto.</p></details>
+</section>
+
+<section id="limites">
+  <span class="tag">Límites y glosario</span>
+  <h2>Lo que no debes dar por hecho</h2>
+  <details open><summary>Este modelo no es un sistema real</summary>
+    <p>No sustituye normas ni profesionales, no está certificado (series EN 50126, 50128 y 50129) y solo representa dos trenes y seis tramos. Suponemos que al caer el LZB los trenes se paran y que a la vista el maquinista frena ante un obstáculo.</p></details>
+  <details open><summary>¿Ya existe algo parecido?</summary>
+    <p>Lo que he encontrado hasta el 2 de noviembre: ninguna comprobación técnica automática en este paso, solo normas y llamadas.</p>
+    <ul>
+      <li>Nuevo protocolo de Renfe y Adif (prensa, 1 nov): parar, no reanudar sin el telefonema LZB3, ir a la vista a 40 km/h y confirmar por teléfono que en el tramo solo está su tren. Todo depende de personas.</li>
+      <li>La CIAF ya avisó en 2024 de que confiar en que una persona compruebe el tramo libre «puede fallar», y pidió medidas técnicas.</li>
+      <li>Según la prensa, Adif considera los enrutadores automáticos del ASFA una ayuda y no una instalación de seguridad, y no los extendió a otras líneas.</li>
+      <li>El ERTMS, que debe sustituir al LZB en esta línea, aún no está en servicio.</li>
+      <li>No he encontrado el texto oficial del procedimiento ni ningún estudio publicado de una guarda como esta. Eso no prueba que no exista: puede estar sin publicar.</li>
+    </ul>
+    <p>Por eso la Guarda es una hipótesis para revisar con profesionales, no una novedad probada.</p></details>
+  <details><summary>Busco revisión de profesionales</summary>
+    <p>Si trabajas en señalización, circulación o métodos formales y ves algo incorrecto, el modelo debe cambiar.</p></details>
+  <details><summary>Glosario</summary>
+    <p><strong>LZB:</strong> vigilancia continua de los trenes por un cable entre carriles.</p>
+    <p><strong>ASFA:</strong> ayuda a la conducción que solo actúa en puntos concretos (balizas).</p>
+    <p><strong>Modo degradado:</strong> funcionamiento de respaldo cuando cae el sistema principal.</p>
+    <p><strong>Tramo (cantón):</strong> trozo de vía donde solo cabe un tren.</p>
+    <p><strong>AITAT / CIAF:</strong> organismos de investigación técnica de accidentes.</p>
+    <p><strong>TLA+:</strong> lenguaje que prueba todas las combinaciones posibles de un modelo.</p></details>
+  <details><summary>Fuentes</summary>
+    <ul class="src">
+      <li><a href="https://en.wikipedia.org/wiki/2026_Toledo_train_collision" target="_blank" rel="noopener">Wikipedia: 2026 Toledo train collision</a></li>
+      <li><a href="https://www.euronews.com/2026/10/29/spain-train-crash-what-happened-in-the-17-minutes-before-the-collision" target="_blank" rel="noopener">Euronews: los 17 minutos antes</a></li>
+      <li><a href="https://time.com/article/2026/10/29/spain-high-speed-train-crash-cause-inexplicable-human-error-transport/" target="_blank" rel="noopener">Time: 69 muertos y declaraciones del ministro</a></li>
+      <li><a href="https://en.ara.cat/media/what-failed-technically-in-the-train-crash-of-toledo_1_5894966.html" target="_blank" rel="noopener">Ara: qué falló técnicamente</a></li>
+      <li><a href="https://www.elespanol.com/invertia/observatorios/movilidad/20261028/accidente-minuto-ave-impacto-iryo-kmh-recibir-orden-adif-rebasar-semaforo-rojo/1003744438265_0.html" target="_blank" rel="noopener">El Español: minuto a minuto</a></li>
+      <li><a href="https://www.elespanol.com/invertia/observatorios/movilidad/20261028/puente-describe-caos-control-adif-maquinista-advirtio-marcha-no-podia-normal-dieron-razon/1003744438318_0.html" target="_blank" rel="noopener">El Español: lo que describió el ministro</a></li>
+      <li><a href="https://es.euronews.com/2026/11/02/la-tragedia-de-urda-reabre-en-europa-el-debate-sobre-las-fallas-de-seguridad-al-degradar-s" target="_blank" rel="noopener">Euronews: debate sobre degradar el LZB y la CIAF</a></li>
+      <li><a href="https://theobjective.com/economia/transporte/2026-11-02/renfe-anula-consigna-velocidad-fallo-lz" target="_blank" rel="noopener">The Objective: consigna de Renfe de 40 km/h</a></li>
+      <li><a href="https://www.infobae.com/espana/2026/10/29/la-colision-entre-el-ave-y-el-iryo-en-el-accidente-ferroviario-de-urda-toledo-se-produjo-a-mas-de-160-kmh-segun-el-primer-informe/" target="_blank" rel="noopener">Infobae: primer informe técnico</a></li>
+      <li><a href="https://www.elespanol.com/invertia/observatorios/movilidad/20261101/renfe-refuerza-seguridad-madrid-sevilla-protocolo-impedido-suceso-no-deseado-urda/1003744442806_0.html" target="_blank" rel="noopener">El Español: nuevo protocolo de Renfe y Adif (1 nov)</a></li>
+      <li><a href="https://www.infobae.com/espana/agencias/2026/11/02/adif-niega-que-rechazara-recomendaciones-de-la-comision-de-accidentes-ciaf-en-2024/" target="_blank" rel="noopener">Infobae: Adif y las recomendaciones de la CIAF (2 nov)</a></li>
+    </ul></details>
+  <footer>Datos de fuentes públicas a 2 de noviembre de 2026; pueden cambiar con el informe de la AITAT.</footer>
+</section>
+<div class="next" id="next-datos" data-noi18n></div>
+</div>
+
+</main>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+  var EN = {"¿Ya existe algo parecido?": "Does something like this already exist?", "Lo que he encontrado hasta el 2 de noviembre: ninguna comprobación técnica automática en este paso, solo normas y llamadas.": "What I found up to 2 November: no automatic technical check at this step, only rules and phone calls.", "Nuevo protocolo de Renfe y Adif (prensa, 1 nov): parar, no reanudar sin el telefonema LZB3, ir a la vista a 40 km/h y confirmar por teléfono que en el tramo solo está su tren. Todo depende de personas.": "New Renfe and Adif protocol (press, 1 Nov): stop, do not resume without the LZB3 phone message, proceed on sight at 40 km/h and confirm by phone that only your train is in the section. It all depends on people.", "La CIAF ya avisó en 2024 de que confiar en que una persona compruebe el tramo libre «puede fallar», y pidió medidas técnicas.": "In 2024 the CIAF already warned that relying on a person to check the section is clear «can fail», and asked for technical measures.", "Según la prensa, Adif considera los enrutadores automáticos del ASFA una ayuda y no una instalación de seguridad, y no los extendió a otras líneas.": "According to the press, Adif regards the automatic ASFA routers as an operating aid, not a safety installation, and did not extend them to other lines.", "El ERTMS, que debe sustituir al LZB en esta línea, aún no está en servicio.": "ERTMS, which is meant to replace the LZB on this line, is not yet in service.", "No he encontrado el texto oficial del procedimiento ni ningún estudio publicado de una guarda como esta. Eso no prueba que no exista: puede estar sin publicar.": "I found neither the official text of the procedure nor any published study of a guard like this. That does not prove it does not exist: it may be unpublished.", "Por eso la Guarda es una hipótesis para revisar con profesionales, no una novedad probada.": "So the Guard is a hypothesis to review with professionals, not a proven novelty.", "El Español: nuevo protocolo de Renfe y Adif (1 nov)": "El Español: new Renfe and Adif protocol (1 Nov)", "Infobae: Adif y las recomendaciones de la CIAF (2 nov)": "Infobae: Adif and the CIAF recommendations (2 Nov)", "Proyecto abierto · datos a 2 nov 2026": "Open project · data as of 2 Nov 2026", "Una barrera para que un error humano no baste": "A barrier so a human error is not enough", "El 28 de octubre murieron 69 personas cerca de Toledo. Proponemos una herramienta simple para el momento más delicado: cuando el sistema principal falla y las órdenes dependen de una persona.": "On 28 October, 69 people died near Toledo. We propose a simple tool for the most delicate moment: when the main system fails and orders depend on one person.", "AVE · en marcha": "AVE · running", "Iryo · parado delante": "Iryo · stopped ahead", "La vista es un esquema, no está a escala.": "The view is a schematic, not to scale.", "Prototipo de investigación.": "Research prototype.", "No es un sistema real ni certificado y no señala culpables: la investigación oficial sigue abierta y casi todo es provisional. Recuerdo y respeto para las víctimas.": "Not a real or certified system, and it does not point to anyone to blame: the official investigation is still open and almost everything is provisional. Remembrance and respect for the victims.", "La idea en 10 segundos": "The idea in 10 seconds", "Problema, herramienta, resultado": "Problem, tool, result", "El problema": "The problem", "Cuando cae el LZB, el sistema que vigila a los trenes, todo depende de las órdenes de una persona. Si se equivoca, nada la frena.": "When the LZB, the system that watches the trains, goes down, everything depends on one person's orders. If they get it wrong, nothing stops them.", "La herramienta": "The tool", "La": "The", "Guarda": "Guard", "revisa cada orden antes de enviarla. Si hay un tren delante sin confirmar libre, bloquea la marcha normal.": "checks every order before it is sent. If there is a train ahead that is not confirmed clear, it blocks normal running.", "El resultado": "The result", "En el modelo, con la Guarda los dos trenes siempre salen sin chocar, y el servicio no se bloquea.": "In the model, with the Guard both trains always get out without colliding, and service is never blocked.", "La Guarda: un segundo par de ojos": "The Guard: a second pair of eyes", "Es un programa que se coloca entre el control y los trenes. No da órdenes ni sustituye a nadie. Solo hace una pregunta antes de dejar pasar una orden.": "It is a program that sits between the control centre and the trains. It does not give orders or replace anyone. It only asks one question before letting an order through.", "orden: AVE, marcha normal": "order: AVE, normal running", "envía": "sends", "GUARDA": "GUARD", "¿hay un tren delante": "is there a train ahead", "sin confirmar libre?": "not confirmed clear?", "SÍ": "YES", "Orden pasa": "Order passes", "el tren avanza": "the train moves", "Orden bloqueada": "Order blocked", "Solo se permite": "Only allowed:", "marcha a la vista": "proceed on sight", "(máx. 40 km/h)": "(max. 40 km/h)", "+ aviso con el motivo": "+ warning with the reason", "Una sola regla, aplicada en cada orden del modo degradado.": "One rule, applied to every order in degraded mode.", "Así se vería para el controlador": "What the controller would see", "PANEL DE CONTROL · MODO DEGRADADO (ejemplo)": "CONTROL PANEL · DEGRADED MODE (example)", "Orden: AVE 2080 → marcha normal": "Order: AVE 2080 → normal running", "ORDEN BLOQUEADA": "ORDER BLOCKED", "Iryo 6076 está parado delante, en el tramo 3, sin confirmar libre.": "Iryo 6076 is stopped ahead, in section 3, not confirmed clear.", "Alternativa permitida:": "Allowed alternative:", "marcha a la vista, máx. 40 km/h": "proceed on sight, max. 40 km/h", "Pantalla inventada para ilustrar la idea. No es ninguna pantalla real de Adif.": "Invented screen to illustrate the idea. It is not a real Adif screen.", "Con y sin la Guarda": "With and without the Guard", "orden": "order", "Nada la frena si falla la persona": "Nothing stops it if the person fails", "1 barrera humana": "1 human barrier", "Sin la Guarda: depende de una sola persona.": "Without the Guard: it depends on a single person.", "Una orden peligrosa se detiene antes": "A dangerous order is stopped earlier", "2 barreras: persona + Guarda": "2 barriers: person + Guard", "Con la Guarda: una segunda comprobación automática.": "With the Guard: a second, automatic check.", "Qué es": "What it is", "Un aviso que bloquea una orden concreta": "A warning that blocks one specific order", "Una regla simple y comprobada": "A simple, tested rule", "Un prototipo abierto para revisar": "An open prototype to be reviewed", "Qué no es": "What it is not", "No sustituye a controladores ni maquinistas": "It does not replace controllers or drivers", "No es un sistema certificado": "It is not a certified system", "No afirma cuál fue la causa real": "It does not claim what the real cause was", "Pruébalo tú": "Try it yourself", "Ponte en el puesto de control": "Take the controller's seat", "El AVE (azul marino) va detrás del Iryo (gris azulado). Cae el LZB. Tú autorizas. Cambia la Guarda y compara.": "The AVE (navy) is behind the Iryo (grey-blue). The LZB fails. You authorise. Switch the Guard and compare.", "Guarda activada": "Guard on", "1. Cae el LZB": "1. LZB fails", "AVE: marcha normal": "AVE: normal running", "AVE: a la vista": "AVE: on sight", "Iryo: a la vista": "Iryo: on sight", "Avanzar": "Step", "Reiniciar": "Reset", "Caso del 28-oct sin Guarda": "28 Oct case without the Guard", "Mismo caso con Guarda": "Same case with the Guard", "¿Qué es \"a la vista\" y \"normal\"?": "What do \"on sight\" and \"normal\" mean?", "A la vista el tren va despacio (máx. 40 km/h) y puede parar ante lo que vea. En marcha normal va a la velocidad de la línea, y entre balizas nada vigila la distancia con el tren de delante.": "On sight the train goes slowly (max. 40 km/h) and can stop for whatever it sees. In normal running it goes at line speed, and between beacons nothing watches the distance to the train ahead.", "Qué pasó": "What happened", "Los hechos, paso a paso": "The facts, step by step", "Desliza para avanzar": "Slide to move forward", "Las horas varían entre fuentes (el fallo se sitúa entre las 08:30 y las 08:32).": "Times vary between sources (the failure is placed between 08:30 and 08:32).", "Por qué funciona": "Why it works", "Sumar una barrera tapa el hueco": "Adding one barrier closes the gap", "Señales": "Signals", "LZB (caído)": "LZB (down)", "Personas": "People", "El error (flecha roja) cruza los huecos alineados hasta chocar con la Guarda.": "The error (red arrow) passes through the aligned holes until it hits the Guard.", "Cada capa tiene huecos. El peligro aparece cuando se alinean. La Guarda es una capa sin hueco en ese punto.": "Every layer has holes. Danger appears when they line up. The Guard is a layer with no hole at that point.", "La prueba matemática": "The mathematical proof", "Una herramienta llamada TLA+ revisa todas las combinaciones posibles de un modelo con dos trenes y seis tramos.": "A tool called TLA+ checks every possible combination of a model with two trains and six sections.", "Seguro": "Safe", "situaciones sin choque si se cumple el procedimiento (marcha a la vista).": "situations without a collision if the procedure is followed (proceed on sight).", "Choque": "Collision", "5 pasos": "5 steps", "bastan para chocar si el control puede autorizar marcha normal con un tren delante.": "are enough to collide if the control centre can authorise normal running with a train ahead.", "situaciones sin choque con la Guarda, y ambos trenes siempre pueden salir.": "situations without a collision with the Guard, and both trains can always get out.", "Los 5 pasos del choque": "The 5 steps to the collision", "Los dos trenes circulan con LZB.": "Both trains run with LZB.", "Cae el LZB y ambos se detienen.": "The LZB fails and both stop.", "Se autoriza al AVE en marcha normal.": "The AVE is authorised in normal running.", "El AVE avanza un tramo.": "The AVE moves forward one section.", "Entra en el tramo del Iryo: choque.": "It enters the Iryo's section: collision.", "Dato importante:": "Important:", "si se sigue el procedimiento, el modelo ya es seguro. La Guarda importa solo cuando alguien se desvía, y bajo presión pasa. Además, el código de la Guarda se probó contra esos 5 pasos y bloquea justo el que lleva al choque.": "if the procedure is followed, the model is already safe. The Guard matters only when someone deviates, and under pressure that happens. Also, the Guard's code was tested against those 5 steps and blocks exactly the one that leads to the collision.", "Transparencia": "Transparency", "Qué se sabe y qué no es público": "What is known and what is not public", "Dato": "Fact", "Estado": "Status", "Detalle": "Detail", "69 fallecidos": "69 deaths", "Oficial": "Official", "Provisional. Heridos: entre 100 y 179 según fuente.": "Provisional. Injured: between 100 and 179 depending on source.", "Choque ~08:53, km 118, Madrid-Sevilla": "Collision ~08:53, km 118, Madrid-Seville", "Ministerio y primer informe de la AITAT.": "Ministry and first AITAT report.", "LZB cae ~22 min antes": "LZB fails ~22 min earlier", "Primer informe AITAT. Tramo afectado: 63 a 90 km según fuente.": "First AITAT report. Affected stretch: 63 to 90 km depending on source.", "Debía ordenarse marcha a la vista": "Proceed on sight should have been ordered", "Versión del ministerio. No hemos leído la norma exacta.": "Ministry's version. We have not read the exact rule.", "Velocidad del impacto": "Impact speed", "Estimada": "Estimated", "160 a 200 km/h. Falta analizar las cajas negras.": "160 to 200 km/h. Black boxes still to be analysed.", "Maquinista pidió pasar señal en rojo": "Driver asked to pass a red signal", "Según medios": "According to media", "Sin fuente oficial.": "No official source.", "Otro maquinista corrigió la orden; el Iryo avisó dos veces": "Another driver corrected the order; the Iryo warned twice", "Según el ministro": "According to the minister", "Sin verificar de forma independiente.": "Not independently verified.", "Trenes detenidos": "Trains stopped", "Contradictorio": "Contradictory", "Seis o hasta ocho.": "Six or up to eight.", "Causa del fallo del LZB": "Cause of the LZB failure", "Se desconoce": "Unknown", "Se habla de un fallo informático; sin causa confirmada.": "An IT fault is mentioned; no confirmed cause.", "Por qué se dio la orden": "Why the order was given", "Sumario judicial secreto.": "Judicial file is secret.", "Procedimiento interno de Adif ante la caída del LZB": "Adif's internal procedure when the LZB fails", "No público": "Not public", "Base: Reglamento de Circulación (RD 664/2015). No hallamos el apartado concreto.": "Basis: Railway Traffic Regulation (RD 664/2015). We did not find the specific section.", "Audios del centro de control y cajas negras": "Control-centre audio and black boxes", "En manos de Guardia Civil y AITAT. Hay filtraciones sin verificar.": "Held by the Guardia Civil and AITAT. Unverified leaks exist.", "Informe final y resultado judicial": "Final report and court outcome", "Pendiente": "Pending", "Juzgado nº 2 de Orgaz (Toledo).": "Court no. 2 of Orgaz (Toledo).", "Un aviso previo de 2024": "A prior warning from 2024", "Según la prensa, la CIAF analizó en 2024 un incidente en Cuenca-Fernando Zóbel donde se reanudó la marcha por una comprobación humana de que la vía estaba libre, y advirtió de que es una barrera frágil. Adif dice que no rechazó sus recomendaciones. Las fuentes discrepan en cuántas eran (5 o 7) y en su estado.": "According to the press, in 2024 the CIAF analysed an incident at Cuenca-Fernando Zóbel where running was resumed on a human check that the line was clear, and warned that it is a fragile barrier. Adif says it did not reject its recommendations. Sources disagree on how many there were (5 or 7) and on their status.", "Debate laboral": "Labour dispute", "Los controladores de Adif han convocado huelga y su sindicato afirma que falta un 20 % de plantilla. Es una afirmación de una de las partes. Las responsabilidades las fijará la investigación, no este proyecto.": "Adif controllers have called a strike and their union says staffing is 20 % short. That is one party's claim. Responsibilities will be set by the investigation, not by this project.", "Límites y glosario": "Limits and glossary", "Lo que no debes dar por hecho": "What you should not take for granted", "Este modelo no es un sistema real": "This model is not a real system", "No sustituye normas ni profesionales, no está certificado (series EN 50126, 50128 y 50129) y solo representa dos trenes y seis tramos. Suponemos que al caer el LZB los trenes se paran y que a la vista el maquinista frena ante un obstáculo.": "It does not replace rules or professionals, it is not certified (EN 50126, 50128 and 50129 series) and it only represents two trains and six sections. We assume that when the LZB fails the trains stop, and that on sight the driver brakes for an obstacle.", "Busco revisión de profesionales": "Looking for professional review", "Si trabajas en señalización, circulación o métodos formales y ves algo incorrecto, el modelo debe cambiar.": "If you work in signalling, traffic operations or formal methods and see something wrong, the model should change.", "Glosario": "Glossary", "vigilancia continua de los trenes por un cable entre carriles.": "continuous train supervision through a cable between the rails.", "ayuda a la conducción que solo actúa en puntos concretos (balizas).": "driving aid that only acts at specific points (beacons).", "Modo degradado:": "Degraded mode:", "funcionamiento de respaldo cuando cae el sistema principal.": "backup operation when the main system goes down.", "Tramo (cantón):": "Section (block):", "trozo de vía donde solo cabe un tren.": "a stretch of track where only one train fits.", "organismos de investigación técnica de accidentes.": "technical accident investigation bodies.", "lenguaje que prueba todas las combinaciones posibles de un modelo.": "a language that checks every possible combination of a model.", "Fuentes": "Sources", "Euronews: los 17 minutos antes": "Euronews: the 17 minutes before", "Time: 69 muertos y declaraciones del ministro": "Time: 69 dead and the minister's statements", "Ara: qué falló técnicamente": "Ara: what failed technically", "El Español: minuto a minuto": "El Español: minute by minute", "El Español: lo que describió el ministro": "El Español: what the minister described", "Euronews: debate sobre degradar el LZB y la CIAF": "Euronews: debate on degrading the LZB and the CIAF", "The Objective: consigna de Renfe de 40 km/h": "The Objective: Renfe's 40 km/h instruction", "Infobae: primer informe técnico": "Infobae: first technical report", "Datos de fuentes públicas a 2 de noviembre de 2026; pueden cambiar con el informe de la AITAT.": "Data from public sources as of 2 November 2026; may change with the AITAT report."};
+  var EN_ARIA = {"Un tren en marcha detrás de otro tren detenido sobre la misma vía": "A moving train behind another train stopped on the same track", "Señal que falla": "A failing signal", "Escudo con una marca de verificación": "Shield with a check mark", "Dos trenes que se detienen a distancia": "Two trains stopping at a distance", "Flujo: el control envía una orden, la Guarda pregunta si hay un tren delante sin confirmar libre; si no, permite; si sí, bloquea la marcha normal y ofrece la marcha a la vista": "Flow: the control centre sends an order, the Guard asks whether there is a train ahead not confirmed clear; if not, it allows; if so, it blocks normal running and offers proceed on sight", "Ejemplo de pantalla con una orden bloqueada": "Example screen with a blocked order", "Sin Guarda: la orden del control llega directa al AVE y solo una persona puede detenerla": "Without the Guard: the control centre order goes straight to the AVE and only a person can stop it", "Con Guarda: la orden pasa primero por la Guarda antes de llegar al AVE": "With the Guard: the order first passes through the Guard before reaching the AVE", "Seis tramos de vía con los dos trenes": "Six sections of track with the two trains", "Posición de los dos trenes en cada momento (no está a escala)": "Position of the two trains at each moment (not to scale)", "Cinco lonchas de queso con agujeros: una flecha atraviesa las cuatro primeras y la quinta, la Guarda, la detiene": "Five slices of cheese with holes: an arrow passes through the first four and the fifth, the Guard, stops it", "Vista 3D de la vía con el AVE y el Iryo": "3D view of the track with the AVE and the Iryo"};
+  var lang = "es", theme = "light";
+  function L(p) { return Array.isArray(p) ? p[lang === "en" ? 1 : 0] : p; }
+  function store(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  function load(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+
+  /* ---------- Pasos ---------- */
+  var STEPS = [
+    { id: "que-paso", l: ["Qué pasó", "What happened"] },
+    { id: "idea", l: ["La idea", "The idea"] },
+    { id: "pruebalo", l: ["Pruébalo", "Try it"] },
+    { id: "modelo", l: ["Por qué funciona", "Why it works"] },
+    { id: "datos", l: ["Qué se sabe", "What is known"] }
+  ];
+  var curStep = 0;
+  function buildSteps() {
+    var nav = $("stepscroll"), html = "";
+    STEPS.forEach(function (s, i) {
+      html += '<button type="button" class="stp" data-i="' + i + '"><span class="n">' + (i + 1) + '</span><span>' + L(s.l) + "</span></button>";
+    });
+    nav.innerHTML = html;
+    nav.querySelectorAll(".stp").forEach(function (b) {
+      b.addEventListener("click", function () { goStep(+b.getAttribute("data-i"), true); });
+    });
+    STEPS.forEach(function (s, i) {
+      var box = $("next-" + s.id);
+      var h = "";
+      if (i > 0) h += '<button type="button" class="btn" data-go="' + (i - 1) + '">← ' + L(STEPS[i - 1].l) + "</button>";
+      else h += "<span></span>";
+      if (i < STEPS.length - 1) h += '<button type="button" class="btn primary" data-go="' + (i + 1) + '">' + L(["Siguiente: ", "Next: "]) + L(STEPS[i + 1].l) + " →</button>";
+      else h += '<button type="button" class="btn" data-go="0">' + L(["Volver al inicio", "Back to start"]) + " ↑</button>";
+      box.innerHTML = h;
+      box.querySelectorAll("[data-go]").forEach(function (b) { b.addEventListener("click", function () { goStep(+b.getAttribute("data-go"), true); }); });
+    });
+    markStep();
+  }
+  function markStep() {
+    document.querySelectorAll(".stp").forEach(function (b, i) { if (i === curStep) b.setAttribute("aria-current", "step"); else b.removeAttribute("aria-current"); });
+    $("stepnav").setAttribute("aria-label", L(["Pasos de la página", "Page steps"]));
+  }
+  function goStep(i, scroll) {
+    curStep = i;
+    STEPS.forEach(function (s, k) { $("step-" + s.id).hidden = k !== i; });
+    markStep();
+    try { history.replaceState(null, "", "#" + STEPS[i].id); } catch (e) { try { location.hash = STEPS[i].id; } catch (e2) {} }
+    G.active = STEPS[i].id === "pruebalo";
+    if (G.active) { resize3d(); startLoop(); }
+    if (scroll) $("steps").scrollIntoView({ block: "start" });
+  }
+  window.addEventListener("hashchange", function () {
+    var h = location.hash.replace("#", "");
+    for (var i = 0; i < STEPS.length; i++) if (STEPS[i].id === h && i !== curStep) { goStep(i, true); return; }
+  });
+
+  /* ---------- Idioma de los textos estáticos ---------- */
+  var EXTRA = {"El AVE (azul marino) circula detrás del Iryo (gris azulado), que está parado. Cae el LZB y tú decides cómo reanudar la marcha. Activa o desactiva la Guarda y compara.": "The AVE (navy) runs behind the Iryo (grey-blue), which is stopped. The LZB fails and you decide how to resume. Switch the Guard on or off and compare.", "Lateral": "Side", "Cenital": "Top", "Tu navegador no puede mostrar la vista 3D. Usa el mapa de tramos de abajo: la simulación funciona igual.": "Your browser cannot show the 3D view. Use the section map below: the simulation works the same.", "Arrastra sobre la vista 3D para girar la cámara.": "Drag on the 3D view to rotate the camera.", "Panel del control": "Control panel", "Paso 1: provoca el fallo": "Step 1: trigger the failure", "Paso 2: elige una orden": "Step 2: choose an order", "O mira el caso completo": "Or watch the full case", "Qué es esta simulación": "What this simulation is", "Una ilustración muy simplificada: dos trenes y seis tramos. Las distancias y velocidades no son reales. La lógica de la Guarda es la misma que se comprobó en el modelo matemático.": "A very simplified illustration: two trains and six sections. Distances and speeds are not real. The Guard's logic is the same one that was checked in the mathematical model."};
+  Object.keys(EXTRA).forEach(function (k) { EN[k] = EXTRA[k]; });
+  var nodes = [], ariaEls = [];
+  (function collect() {
+    var w = document.createTreeWalker(document.querySelector(".wrap"), NodeFilter.SHOW_TEXT, {
+      acceptNode: function (n) {
+        if (!n.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+        var p = n.parentNode;
+        if (p.closest("[data-noi18n],script,style,#log,#track,#say,#lzb-state,#ev-time,#ev-badge,#ev-title,#ev-text,#stepscroll,[id^='next-'],#flash")) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    var n;
+    while ((n = w.nextNode())) nodes.push({ n: n, es: n.nodeValue });
+    document.querySelectorAll("[aria-label]").forEach(function (el) {
+      if (el.closest("[data-noi18n]") || el.id === "stepnav") return;
+      ariaEls.push({ el: el, es: el.getAttribute("aria-label") });
+    });
+  })();
+  function applyStatic() {
+    nodes.forEach(function (o) {
+      var key = o.es.trim();
+      o.n.nodeValue = (lang === "en" && EN[key] !== undefined) ? o.es.replace(key, EN[key]) : o.es;
+    });
+    ariaEls.forEach(function (o) {
+      o.el.setAttribute("aria-label", (lang === "en" && EN_ARIA[o.es]) ? EN_ARIA[o.es] : o.es);
+    });
+    document.documentElement.setAttribute("lang", lang);
+    $("bt-lang").textContent = lang === "es" ? "EN" : "ES";
+    $("bt-lang").setAttribute("aria-label", lang === "es" ? "Switch to English" : "Cambiar a español");
+  }
+
+  /* ---------- Tema ---------- */
+  function applyTheme() {
+    document.documentElement.setAttribute("data-theme", theme);
+    $("bt-theme").textContent = theme === "light" ? (lang === "es" ? "☾ Modo oscuro" : "☾ Dark mode") : (lang === "es" ? "☀ Modo claro" : "☀ Light mode");
+    syncTheme3d();
+  }
+  $("bt-theme").addEventListener("click", function () { theme = theme === "light" ? "dark" : "light"; store("gd-theme", theme); applyTheme(); });
+  $("bt-lang").addEventListener("click", function () { lang = lang === "es" ? "en" : "es"; store("gd-lang", lang); refresh(); });
+
+  /* ---------- Línea de tiempo ---------- */
+  var OFF = ["b-ok", ["Oficial", "Official"]], MED = ["b-warn", ["Según medios", "According to media"]], MIN = ["b-warn", ["Según el ministro", "According to the minister"]];
+  var EVENTS = [
+    { t: "~08:30", b: OFF, ax: 20, h: ["Cae el LZB", "The LZB fails"],
+      p: ["Un fallo informático deja sin servicio la vigilancia continua. Los trenes de ese tramo se detienen, entre ellos el Iryo y el AVE que viene detrás.", "An IT fault knocks out continuous supervision. The trains in that stretch stop, including the Iryo and the AVE behind it."] },
+    { t: "~08:36", b: OFF, ax: 20, h: ["El control autoriza al AVE a continuar", "The control centre authorises the AVE to continue"],
+      p: ["Debía ordenarse marcha a la vista (máx. 40 km/h). Según el ministerio, se permitió circular con normalidad.", "Proceed on sight (max. 40 km/h) should have been ordered. According to the ministry, normal running was allowed."] },
+    { t: ["Sin hora fija", "No fixed time"], b: MED, ax: 20, h: ["El AVE pide pasar una señal en rojo", "The AVE asks to pass a red signal"],
+      p: ["Se ha publicado que el maquinista pidió permiso para rebasar una señal roja. No hay confirmación oficial.", "It has been reported that the driver asked permission to pass a red signal. There is no official confirmation."] },
+    { t: ["~08:41 a 08:48", "~08:41 to 08:48"], b: MIN, ax: 20, h: ["El Iryo avisa de que no puede arrancar", "The Iryo warns it cannot start"],
+      p: ["La maquinista comunica que sigue parada. Según el ministro, avisó dos veces. Se desconoce qué se hizo con el aviso.", "The driver reports she is still stopped. According to the minister, she warned twice. What was done with the warning is unknown."] },
+    { t: ["~08:43 a 08:53", "~08:43 to 08:53"], b: ["b-warn", ["Reconstrucción no oficial", "Unofficial reconstruction"]], ax: 190, h: ["El AVE reanuda y acelera", "The AVE restarts and accelerates"],
+      p: ["Un medio, con datos de geolocalización, calcula que recorre unos 25 km a gran velocidad. No es una medición oficial.", "A news outlet, using geolocation data, calculates it covers about 25 km at high speed. It is not an official measurement."] },
+    { t: "~08:53", b: OFF, ax: 252, h: ["El AVE choca con el Iryo", "The AVE hits the Iryo"],
+      p: ["Ocurre en el km 118 de la línea Madrid-Sevilla, a una velocidad estimada de 160 a 200 km/h.", "It happens at km 118 of the Madrid-Seville line, at an estimated 160 to 200 km/h."] },
+    { t: ["Después", "Afterwards"], b: ["b-bad", ["En investigación", "Under investigation"]], ax: 252, h: ["69 fallecidos y dos investigaciones", "69 dead and two investigations"],
+      p: ["La AITAT investiga la parte técnica y un juzgado de Orgaz la judicial, con secreto de sumario.", "AITAT investigates the technical side and a court in Orgaz the judicial one, under secrecy of the file."] }
+  ];
+  var curEv = 0;
+  function showEvent(i) {
+    curEv = i; var e = EVENTS[i];
+    $("ev-time").textContent = L(e.t);
+    var bd = $("ev-badge"); bd.className = "badge " + e.b[0]; bd.textContent = L(e.b[1]);
+    $("ev-title").textContent = L(e.h); $("ev-text").textContent = L(e.p);
+    $("r-ave").setAttribute("x", e.ax);
+    $("r-ave").style.color = i >= 5 ? "var(--bad)" : "var(--accent)";
+    $("r-boom").setAttribute("visibility", i === 5 ? "visible" : "hidden");
+  }
+  $("scrub").addEventListener("input", function (ev) { showEvent(+ev.target.value); });
+
+  /* ---------- Lógica del simulador ---------- */
+  var N = 6, SL = 10, S, busy = false, lastSay = null, outs = [];
+  var NAME = { A: "AVE", I: "Iryo" };
+  function fresh() { return { lzb: true, pos: { A: 1, I: 3 }, moving: { A: true, I: false }, auth: { A: "none", I: "none" }, collision: false, log: [] }; }
+  function other(t) { return t === "A" ? "I" : "A"; }
+  function occupied(cell, t) { return cell <= N && S.pos[other(t)] === cell; }
+  function trainAhead(t) { var u = other(t); return S.pos[u] > S.pos[t] && S.pos[u] <= N; }
+  function say(pair, kind) { lastSay = { p: pair, k: kind }; paintSay(); }
+  function paintSay() { if (!lastSay) return; var e = $("say"); e.textContent = L(lastSay.p); e.className = "say" + (lastSay.k ? " " + lastSay.k : ""); }
+  function logit(pair) { S.log.push(pair); }
+  var flashT = null;
+  function flash(pair, kind) {
+    var f = $("flash"); f.textContent = L(pair); f.className = "flash" + (kind ? " " + kind : ""); f.hidden = false;
+    clearTimeout(flashT); flashT = setTimeout(function () { f.hidden = true; }, 2800);
+  }
+  function stateLabel(t) {
+    if (S.pos[t] > N) return L(["fuera del tramo", "out of the section"]);
+    if (!S.moving[t]) return L(["parado", "stopped"]);
+    if (S.lzb) return L(["en marcha con LZB", "running with LZB"]);
+    return S.auth[t] === "sight" ? L(["a la vista · máx. 40 km/h", "on sight · max. 40 km/h"]) : L(["marcha normal · hasta 200 km/h", "normal running · up to 200 km/h"]);
+  }
+
+  function render() {
+    var h = "";
+    for (var c = 1; c <= N; c++) {
+      var inner = "";
+      ["A", "I"].forEach(function (t) {
+        if (S.pos[t] === c) inner += '<span class="train ' + t + (S.collision ? " crash" : "") + '">' + NAME[t] + (S.moving[t] ? " ▶" : " ■") + "</span>";
+      });
+      h += '<div class="cell"><small>' + L(["Tramo", "Section"]) + " " + c + "</small>" + inner + "</div>";
+    }
+    $("track").innerHTML = h;
+    $("lzb-state").innerHTML = '<span class="lamp" style="background:' + (S.lzb ? "var(--ok)" : "var(--bad)") + '"></span>LZB: <strong>' + (S.lzb ? L(["operativo", "working"]) : L(["caído", "down"])) + "</strong>" + (S.collision ? ' <span class="badge b-bad">' + L(["Colisión simulada", "Simulated collision"]) + "</span>" : "");
+    $("log").innerHTML = S.log.map(function (m) { return "<li>" + L(m) + "</li>"; }).join("");
+    $("hud").innerHTML = "AVE: " + stateLabel("A") + "<br>Iryo: " + stateLabel("I");
+    $("b-fail").disabled = busy || !S.lzb || S.collision;
+    ["b-normal", "b-sight", "b-iryo"].forEach(function (id) { $(id).disabled = busy || S.collision; });
+    $("b-auto-off").disabled = busy; $("b-auto-on").disabled = busy;
+    sync3d();
+  }
+
+  function tick() {
+    if (S.collision) return;
+    ["A", "I"].forEach(function (t) {
+      if (S.collision || !S.moving[t] || S.pos[t] > N) return;
+      var nxt = S.pos[t] + 1, X = NAME[t];
+      if ((S.lzb || S.auth[t] === "sight") && occupied(nxt, t)) {
+        S.moving[t] = false; S.auth[t] = "none";
+        var why = S.lzb ? ["el LZB lo frena", "the LZB brakes it"] : ["el maquinista ve el tren y frena a tiempo porque va despacio", "the driver sees the train and brakes in time because it is going slowly"];
+        logit([X + " se detiene: " + why[0] + ".", X + " stops: " + why[1] + "."]);
+        say([X + " se detiene a tiempo: " + why[0] + ".", X + " stops in time: " + why[1] + "."], "ok");
+        return;
+      }
+      S.pos[t] = nxt;
+      if (nxt > N) { S.moving[t] = false; S.auth[t] = "none"; logit([X + " sale del tramo.", X + " leaves the section."]); say([X + " sale del tramo sin problema.", X + " leaves the section safely."], "ok"); return; }
+      if (occupied(nxt, t)) {
+        S.collision = true;
+        logit(["Colisión simulada: " + X + " entra en el tramo " + nxt + ", ocupado.", "Simulated collision: " + X + " enters section " + nxt + ", which is occupied."]);
+        say(["Colisión simulada. A velocidad normal nada vigila la distancia entre balizas. Prueba de nuevo con la Guarda activada.", "Simulated collision. At normal speed nothing watches the distance between beacons. Try again with the Guard on."], "bad");
+        flash(["COLISIÓN SIMULADA", "SIMULATED COLLISION"]);
+      } else if (S.auth[t] === "normal") {
+        say([X + " avanza a velocidad normal. Aún no choca, pero no podría parar si hay un obstáculo.", X + " moves at normal speed. It has not hit anything yet, but it could not stop for an obstacle."], "bad");
+      }
+    });
+  }
+
+  function failLZB() {
+    if (!S.lzb || S.collision) return;
+    S.lzb = false; S.moving.A = false; S.moving.I = false;
+    logit(["Cae el LZB: todos los trenes se detienen.", "The LZB fails: all trains stop."]);
+    say(["Cae el LZB y los dos trenes se paran. El Iryo sigue delante. Ahora decides tú.", "The LZB fails and both trains stop. The Iryo is still ahead. Now it is up to you."]);
+    flash(["LZB CAÍDO", "LZB DOWN"]);
+  }
+
+  function authorize(t, mode) {
+    var X = NAME[t];
+    if (S.lzb) { say(["El LZB funciona todavía. Pulsa \"1. Cae el LZB\".", "The LZB still works. Press \"1. LZB fails\"."]); return; }
+    if (S.moving[t]) { say([X + " ya está en marcha.", X + " is already moving."]); return; }
+    if (S.pos[t] > N) { say([X + " ya salió del tramo.", X + " has already left the section."]); return; }
+    if (mode === "normal" && $("guard").checked && trainAhead(t)) {
+      logit(["La Guarda bloquea la marcha normal del " + X + ".", "The Guard blocks normal running for the " + X + "."]);
+      say(["ORDEN BLOQUEADA por la Guarda: hay un tren delante en el mismo tramo sin confirmar libre. Solo se permite la marcha a la vista (máx. 40 km/h).", "ORDER BLOCKED by the Guard: there is a train ahead in the same section, not confirmed clear. Only proceed on sight is allowed (max. 40 km/h)."], "ok");
+      flash(["ORDEN BLOQUEADA POR LA GUARDA", "ORDER BLOCKED BY THE GUARD"], "ok");
+      return;
+    }
+    S.moving[t] = true; S.auth[t] = mode;
+    logit(mode === "sight"
+      ? ["El control autoriza al " + X + " en marcha a la vista.", "The control centre authorises the " + X + " to proceed on sight."]
+      : ["El control autoriza al " + X + " en marcha normal.", "The control centre authorises the " + X + " to run at normal speed."]);
+    say(mode === "sight"
+      ? [X + " avanza despacio.", X + " moves slowly."]
+      : [X + " avanza en marcha normal. Observa qué pasa.", X + " moves at normal speed. Watch what happens."], mode === "sight" ? "" : "bad");
+  }
+
+  function clearOuts() { outs.forEach(clearTimeout); outs = []; }
+  function reset() {
+    clearOuts(); busy = false; S = fresh(); G.snap = true; G.crashed = false;
+    say(["El AVE se acerca al Iryo parado, vigilado por el LZB. Pulsa \"1. Cae el LZB\" para empezar.", "The AVE approaches the stopped Iryo under LZB supervision. Press \"1. LZB fails\" to start."]);
+    render();
+  }
+  function autoplay(guard) {
+    reset(); $("guard").checked = guard; busy = true; render();
+    try { $("viewbox").scrollIntoView({ behavior: "smooth", block: "start" }); } catch (e) { $("viewbox").scrollIntoView(); }
+    outs.push(setTimeout(function () { failLZB(); render(); }, 3200));
+    outs.push(setTimeout(function () { authorize("A", "normal"); render(); }, 5200));
+    outs.push(setTimeout(function () { busy = false; render(); }, 11000));
+  }
+  setInterval(function () {
+    if (document.hidden || !S) return;
+    if (!S.collision && (S.moving.A || S.moving.I)) { tick(); render(); }
+  }, 1100);
+
+  $("b-fail").addEventListener("click", function () { failLZB(); render(); });
+  $("b-normal").addEventListener("click", function () { authorize("A", "normal"); render(); });
+  $("b-sight").addEventListener("click", function () { authorize("A", "sight"); render(); });
+  $("b-iryo").addEventListener("click", function () { authorize("I", "sight"); render(); });
+  $("b-reset").addEventListener("click", reset);
+  $("b-auto-off").addEventListener("click", function () { autoplay(false); });
+  $("b-auto-on").addEventListener("click", function () { autoplay(true); });
+
+  /* ---------- Vista 3D ---------- */
+  var G = { ok: false, active: false, snap: true, crashed: false, loop: false };
+  var T3 = {};
+  function cssVar(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim() || "#888888"; }
+  function mkLabel(txt) {
+    var c = document.createElement("canvas"); c.width = 64; c.height = 64;
+    var x = c.getContext("2d"); x.fillStyle = "rgba(0,0,0,0)"; x.fillRect(0, 0, 64, 64);
+    x.fillStyle = "#8a93a8"; x.font = "bold 40px sans-serif"; x.textAlign = "center"; x.textBaseline = "middle"; x.fillText(txt, 32, 34);
+    var tex = new THREE.CanvasTexture(c);
+    var sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true }));
+    sp.scale.set(3, 3, 1); return sp;
+  }
+  function makeTrain(color, role) {
+    var g = new THREE.Group();
+    var mat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.45, metalness: 0.2 });
+    mat.userData.role = role;
+    var body = new THREE.Mesh(new THREE.BoxGeometry(7, 1.7, 1.9), mat); body.position.set(-0.6, 1.35, 0); g.add(body);
+    var nose = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.85, 1.9, 24), mat);
+    nose.rotation.x = Math.PI / 2; nose.scale.set(1.9, 1, 1); nose.position.set(2.9, 1.35, 0); g.add(nose);
+    var win = new THREE.Mesh(new THREE.BoxGeometry(6.4, 0.4, 1.96), new THREE.MeshStandardMaterial({ color: 0x0b1226, roughness: 0.2, metalness: 0.4 }));
+    win.position.set(-0.7, 1.75, 0); g.add(win);
+    var stripe = new THREE.Mesh(new THREE.BoxGeometry(7.05, 0.12, 1.95), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+    stripe.position.set(-0.6, 1.1, 0); g.add(stripe);
+    [-3, -0.6, 1.8].forEach(function (x) {
+      var b = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.5, 1.5), new THREE.MeshStandardMaterial({ color: 0x1a1a22 }));
+      b.position.set(x, 0.45, 0); g.add(b);
+    });
+    return g;
+  }
+  function init3d() {
+    if (typeof THREE === "undefined") return noGL();
+    try {
+      T3.renderer = new THREE.WebGLRenderer({ canvas: $("cv"), antialias: true });
+    } catch (e) { return noGL(); }
+    try {
+      T3.renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+      T3.scene = new THREE.Scene();
+      T3.camera = new THREE.PerspectiveCamera(38, 1.8, 0.5, 500);
+      T3.scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+      var sun = new THREE.DirectionalLight(0xffffff, 0.8); sun.position.set(20, 40, 30); T3.scene.add(sun);
+      T3.ground = new THREE.Mesh(new THREE.PlaneGeometry(260, 80), new THREE.MeshStandardMaterial({ color: 0xdddddd }));
+      T3.ground.rotation.x = -Math.PI / 2; T3.scene.add(T3.ground);
+      T3.tiles = [];
+      for (var i = 0; i < N; i++) {
+        var tile = new THREE.Mesh(new THREE.PlaneGeometry(SL - 0.3, 7), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+        tile.rotation.x = -Math.PI / 2; tile.position.set(i * SL + SL / 2, 0.02, 0); T3.scene.add(tile); T3.tiles.push(tile);
+        var lab = mkLabel(String(i + 1)); lab.position.set(i * SL + SL / 2, 1.0, 4.6); T3.scene.add(lab);
+      }
+      var ballast = new THREE.Mesh(new THREE.BoxGeometry(110, 0.14, 3.4), new THREE.MeshStandardMaterial({ color: 0x8a8f99 }));
+      ballast.position.set(35, 0.07, 0); T3.scene.add(ballast);
+      for (var x = -18; x <= 88; x += 1.6) {
+        var sl = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.12, 2.5), new THREE.MeshStandardMaterial({ color: 0x5b4a3a }));
+        sl.position.set(x, 0.18, 0); T3.scene.add(sl);
+      }
+      [-0.72, 0.72].forEach(function (z) {
+        var r = new THREE.Mesh(new THREE.BoxGeometry(110, 0.14, 0.14), new THREE.MeshStandardMaterial({ color: 0xc4c9d4, metalness: 0.6, roughness: 0.3 }));
+        r.position.set(35, 0.3, z); T3.scene.add(r);
+      });
+      T3.cableMat = new THREE.MeshBasicMaterial({ color: 0x2dd4bf });
+      var cable = new THREE.Mesh(new THREE.BoxGeometry(60, 0.05, 0.16), T3.cableMat); cable.position.set(30, 0.36, 0); T3.scene.add(cable);
+      T3.lamps = [];
+      for (var k = 1; k < N; k++) {
+        var pole = new THREE.Mesh(new THREE.BoxGeometry(0.16, 2.6, 0.16), new THREE.MeshStandardMaterial({ color: 0x555b6b }));
+        pole.position.set(k * SL, 1.3, 2.5); T3.scene.add(pole);
+        var lamp = new THREE.Mesh(new THREE.SphereGeometry(0.42, 16, 12), new THREE.MeshBasicMaterial({ color: 0x22c55e }));
+        lamp.position.set(k * SL, 2.8, 2.5); T3.scene.add(lamp); T3.lamps.push(lamp);
+      }
+      T3.trains = { A: makeTrain(0x14213d, "A"), I: makeTrain(0x7d8cab, "I") };
+      T3.x = { A: 0, I: 0 }; T3.tx = { A: 0, I: 0 };
+      T3.scene.add(T3.trains.A); T3.scene.add(T3.trains.I);
+      T3.fx = new THREE.Group(); T3.scene.add(T3.fx); T3.parts = [];
+      T3.flashLight = new THREE.PointLight(0xff5533, 0, 40); T3.scene.add(T3.flashLight);
+      T3.az = 0.16; T3.el = 0.5; T3.tAz = 0.16; T3.tEl = 0.5; T3.dist = 60; T3.shake = 0;
+      G.ok = true;
+      bindDrag();
+      $("v-side").addEventListener("click", function () { T3.tAz = 0.1; T3.tEl = 0.3; });
+      $("v-top").addEventListener("click", function () { T3.tAz = 0; T3.tEl = 1.35; });
+      if (typeof ResizeObserver !== "undefined") new ResizeObserver(function () { if (G.active) resize3d(); }).observe($("viewbox"));
+      window.addEventListener("resize", function () { if (G.active) resize3d(); });
+      syncTheme3d();
+    } catch (e) { G.ok = false; noGL(); }
+  }
+  function noGL() { G.ok = false; $("cv").hidden = true; $("nogl").hidden = false; $("labels").hidden = true; $("v-side").hidden = true; $("v-top").hidden = true; document.querySelector(".hint").hidden = true; }
+  function bindDrag() {
+    var cv = $("cv"), down = false, lx = 0, ly = 0;
+    cv.addEventListener("pointerdown", function (e) { down = true; lx = e.clientX; ly = e.clientY; cv.style.cursor = "grabbing"; try { cv.setPointerCapture(e.pointerId); } catch (x) {} });
+    cv.addEventListener("pointermove", function (e) {
+      if (!down) return;
+      T3.tAz -= (e.clientX - lx) * 0.008;
+      if (e.pointerType === "mouse") T3.tEl = Math.max(0.12, Math.min(1.5, T3.tEl + (e.clientY - ly) * 0.006));
+      lx = e.clientX; ly = e.clientY;
+    });
+    var up = function () { down = false; cv.style.cursor = "grab"; };
+    cv.addEventListener("pointerup", up); cv.addEventListener("pointercancel", up);
+  }
+  function syncTheme3d() {
+    if (!G.ok) return;
+    T3.scene.background = new THREE.Color(cssVar("--bg"));
+    T3.ground.material.color.set(cssVar("--line"));
+    T3.tiles.forEach(function (t, i) { t.material.color.set(i % 2 ? cssVar("--track") : cssVar("--panel")); });
+    ["A", "I"].forEach(function (r) {
+      T3.trains[r].traverse(function (m) { if (m.isMesh && m.material.userData.role === r) m.material.color.set(cssVar(r === "A" ? "--accent" : "--iryo")); });
+    });
+    if (G.active) draw3d(0);
+  }
+  function resize3d() {
+    if (!G.ok) return;
+    var b = $("viewbox"), w = b.clientWidth, h = b.clientHeight;
+    if (!w || !h) return;
+    T3.renderer.setSize(w, h, false);
+    T3.camera.aspect = w / h; T3.camera.updateProjectionMatrix();
+    T3.dist = Math.max(36, 66 / T3.camera.aspect);
+    draw3d(0);
+  }
+  function sync3d() {
+    if (!G.ok) return;
+    var tA = (S.pos.A - 0.5) * SL, tI = (S.pos.I - 0.5) * SL;
+    if (S.collision) { tI = tI + 3.5; tA = tI - 7.4; }
+    T3.tx.A = tA; T3.tx.I = tI;
+    if (G.snap) { T3.x.A = tA; T3.x.I = tI; T3.trains.A.rotation.set(0, 0, 0); T3.trains.I.rotation.set(0, 0, 0); clearParts(); G.snap = false; }
+    T3.cableMat.color.set(S.lzb ? 0x2dd4bf : 0x6b7280);
+    for (var k = 1; k < N; k++) {
+      var occ = S.pos.A === k + 1 || S.pos.I === k + 1;
+      T3.lamps[k - 1].material.color.set(occ ? 0xef4444 : (S.lzb ? 0x22c55e : 0xf59e0b));
+    }
+    if (S.collision && !G.crashed) { G.crashed = true; startCrash(); }
+  }
+  function clearParts() { T3.parts.forEach(function (p) { T3.fx.remove(p.m); }); T3.parts = []; T3.shake = 0; T3.flashLight.intensity = 0; }
+  function startCrash() {
+    var px = T3.tx.I - 4.1;
+    var cols = [0xff6b35, 0xffb324, 0xff3b30, 0xffffff];
+    for (var i = 0; i < 36; i++) {
+      var m = new THREE.Mesh(new THREE.SphereGeometry(0.22 + Math.random() * 0.18, 6, 6), new THREE.MeshBasicMaterial({ color: cols[i % cols.length], transparent: true }));
+      m.position.set(px, 1.4, (Math.random() - 0.5) * 1.6);
+      T3.fx.add(m);
+      T3.parts.push({ m: m, vx: (Math.random() - 0.2) * 12, vy: 4 + Math.random() * 9, vz: (Math.random() - 0.5) * 9, life: 0 });
+    }
+    T3.shake = 1; T3.flashLight.position.set(px, 3, 0); T3.flashLight.intensity = 3;
+  }
+  function draw3d(dt) {
+    if (!G.ok) return;
+    var kx = 1 - Math.exp(-dt * (S && S.collision ? 9 : 4.5));
+    ["A", "I"].forEach(function (t) {
+      T3.x[t] += (T3.tx[t] - T3.x[t]) * kx;
+      T3.trains[t].position.set(T3.x[t], 0, 0);
+    });
+    if (S && S.collision) {
+      T3.trains.I.rotation.z += (0.07 - T3.trains.I.rotation.z) * Math.min(1, dt * 5);
+      T3.trains.I.rotation.y += (0.1 - T3.trains.I.rotation.y) * Math.min(1, dt * 5);
+      T3.trains.A.rotation.z += (-0.04 - T3.trains.A.rotation.z) * Math.min(1, dt * 5);
+    }
+    for (var i = T3.parts.length - 1; i >= 0; i--) {
+      var p = T3.parts[i]; p.life += dt;
+      p.vy -= 14 * dt; p.m.position.x += p.vx * dt; p.m.position.y = Math.max(0.2, p.m.position.y + p.vy * dt); p.m.position.z += p.vz * dt;
+      p.m.material.opacity = Math.max(0, 1 - p.life / 1.8);
+      if (p.life > 1.8) { T3.fx.remove(p.m); T3.parts.splice(i, 1); }
+    }
+    T3.flashLight.intensity = Math.max(0, T3.flashLight.intensity - dt * 5);
+    T3.shake = Math.max(0, T3.shake - dt * 1.4);
+    var k2 = 1 - Math.exp(-dt * 6);
+    T3.az += (T3.tAz - T3.az) * k2; T3.el += (T3.tEl - T3.el) * k2;
+    var cx = 29, d = T3.dist, e = T3.el, a = T3.az;
+    var sh = T3.shake * 0.5;
+    T3.camera.position.set(cx + d * Math.cos(e) * Math.sin(a) + (Math.random() - 0.5) * sh, d * Math.sin(e) + (Math.random() - 0.5) * sh, d * Math.cos(e) * Math.cos(a));
+    T3.camera.lookAt(cx, 0.6, 0);
+    T3.renderer.render(T3.scene, T3.camera);
+    ["A", "I"].forEach(function (t) {
+      var v = new THREE.Vector3(T3.x[t], 3.4, 0).project(T3.camera);
+      var el = $("lab-" + t), b = $("viewbox");
+      if (v.z > 1) { el.style.display = "none"; return; }
+      el.style.display = "";
+      el.style.left = ((v.x * 0.5 + 0.5) * b.clientWidth) + "px";
+      el.style.top = ((-v.y * 0.5 + 0.5) * b.clientHeight) + "px";
+    });
+  }
+  function startLoop() {
+    if (G.loop || !G.ok) return;
+    G.loop = true; var last = performance.now();
+    (function frame(now) {
+      if (!G.active) { G.loop = false; return; }
+      var dt = Math.min(0.1, (now - last) / 1000); last = now;
+      if (!document.hidden) draw3d(dt);
+      requestAnimationFrame(frame);
+    })(last);
+  }
+
+  function refresh() { applyStatic(); buildSteps(); applyTheme(); showEvent(curEv); render(); paintSay(); }
+
+  var sl = load("gd-lang"), st = load("gd-theme");
+  if (sl === "en" || sl === "es") lang = sl;
+  if (st === "dark" || st === "light") theme = st;
+  init3d();
+  reset();
+  refresh();
+  var h0 = location.hash.replace("#", ""), start = 0;
+  for (var si = 0; si < STEPS.length; si++) if (STEPS[si].id === h0) start = si;
+  goStep(start, false);
+})();
+</script>
