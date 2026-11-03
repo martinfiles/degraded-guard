@@ -671,8 +671,15 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
     sync3d();
   }
 
+  function curPeriod() {
+    var normal = false;
+    ["A", "I"].forEach(function (t) { if (S.moving[t] && S.auth[t] !== "sight") normal = true; });
+    return normal ? 1100 : 1700;
+  }
   function tick() {
     if (S.collision) return;
+    S.prevC = { A: (S.pos.A - 0.5) * SL, I: (S.pos.I - 0.5) * SL };
+    S.tickAt = performance.now(); S.tickDur = curPeriod();
     ["A", "I"].forEach(function (t) {
       if (S.collision || !S.moving[t] || S.pos[t] > N) return;
       var nxt = S.pos[t] + 1, X = NAME[t];
@@ -722,6 +729,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
     say(mode === "sight"
       ? [X + " avanza despacio.", X + " moves slowly."]
       : [X + " avanza en marcha normal. Observa qué pasa.", X + " moves at normal speed. Watch what happens."], mode === "sight" ? "" : "bad");
+    kick();
   }
 
   function clearOuts() { outs.forEach(clearTimeout); outs = []; }
@@ -738,10 +746,14 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
     if (guard) outs.push(setTimeout(function () { authorize("A", "sight"); render(); }, 8000));
     outs.push(setTimeout(function () { busy = false; render(); }, guard ? 14000 : 11000));
   }
-  setInterval(function () {
+  var clock = null;
+  function clockTick() {
     if (document.hidden || !S) return;
     if (!S.collision && (S.moving.A || S.moving.I)) { tick(); render(); }
-  }, 1100);
+  }
+  function schedule() { clearTimeout(clock); clock = setTimeout(function () { clockTick(); schedule(); }, S ? curPeriod() : 1100); }
+  function kick() { clockTick(); schedule(); }
+  schedule();
 
   $("b-fail").addEventListener("click", function () { failLZB(); render(); });
   $("b-normal").addEventListener("click", function () { authorize("A", "normal"); render(); });
@@ -893,8 +905,15 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   function draw3d(dt) {
     if (!G.ok) return;
     var kx = 1 - Math.exp(-dt * (S && S.collision ? 9 : 4.5));
+    var nowT = performance.now();
     ["A", "I"].forEach(function (t) {
-      T3.x[t] += (T3.tx[t] - T3.x[t]) * kx;
+      var target = T3.tx[t], k = kx;
+      if (S && !S.collision && S.prevC && S.tickAt) {
+        var f = Math.min(1, (nowT - S.tickAt) / (S.tickDur || 1100));
+        target = S.prevC[t] + (T3.tx[t] - S.prevC[t]) * f;
+        k = 1 - Math.exp(-dt * 14);
+      }
+      T3.x[t] += (target - T3.x[t]) * k;
       T3.trains[t].position.set(T3.x[t], 0, 0);
     });
     if (S && S.collision) {
