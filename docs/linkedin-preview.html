@@ -1,0 +1,52 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+*{box-sizing:border-box;margin:0}
+html,body{width:1200px;height:627px;overflow:hidden}
+body{background:#14213d;color:#fff;font-family:Figtree,system-ui,sans-serif;position:relative}
+.rail{position:absolute;left:0;right:0;bottom:0;height:10px;background:#d7263d}
+.left{position:absolute;left:72px;top:64px;width:600px}
+.tag{font-family:'JetBrains Mono',monospace;font-weight:500;font-size:19px;letter-spacing:.14em;text-transform:uppercase;color:#aab6d3}
+h1{font-family:Unbounded,sans-serif;font-weight:700;font-size:86px;line-height:1.02;margin-top:26px;letter-spacing:-.01em}
+h1 span{color:#ff4d63}
+p.sub{font-size:33px;line-height:1.28;margin-top:30px;color:#e6eaf4;font-weight:500;max-width:560px}
+.foot{position:absolute;left:72px;bottom:46px;font-family:'JetBrains Mono',monospace;font-size:18px;color:#aab6d3;letter-spacing:.04em}
+.foot b{color:#fff;font-weight:500}
+svg{position:absolute;right:40px;top:70px}
+</style></head><body>
+<div class="left">
+  <div class="tag">Investigación · Modo degradado ferroviario</div>
+  <h1>La <span>Guarda</span></h1>
+  <p class="sub">Una segunda barrera por si una persona se despista.</p>
+</div>
+<svg width="470" height="470" viewBox="0 0 470 470" role="img">
+  <!-- lonchas -->
+  <g stroke="#aab6d3" stroke-width="3">
+    <rect x="14" y="60" width="62" height="300" rx="12" fill="#1f2f52"/>
+    <rect x="104" y="60" width="62" height="300" rx="12" fill="#1f2f52" stroke-dasharray="8 6"/>
+    <rect x="194" y="60" width="62" height="300" rx="12" fill="#1f2f52"/>
+    <rect x="284" y="60" width="62" height="300" rx="12" fill="#1f2f52"/>
+  </g>
+  <rect x="380" y="46" width="76" height="328" rx="14" fill="#d7263d"/>
+  <!-- huecos alineados -->
+  <g fill="#14213d">
+    <ellipse cx="45" cy="210" rx="16" ry="20"/><ellipse cx="45" cy="120" rx="9" ry="11"/><ellipse cx="45" cy="300" rx="10" ry="12"/>
+    <ellipse cx="135" cy="210" rx="16" ry="20"/><ellipse cx="135" cy="110" rx="10" ry="12"/>
+    <ellipse cx="225" cy="210" rx="16" ry="20"/><ellipse cx="225" cy="310" rx="11" ry="13"/>
+    <ellipse cx="315" cy="210" rx="16" ry="20"/><ellipse cx="315" cy="100" rx="9" ry="11"/>
+  </g>
+  <!-- flecha de error -->
+  <path d="M0 210H368" stroke="#ff4d63" stroke-width="9" stroke-linecap="round"/>
+  <path d="M376 210l-24-17v34z" fill="#ff4d63"/>
+  <!-- escudo / tope en la guarda -->
+  <path d="M418 160l32 12v34c0 24-14 40-32 50-18-10-32-26-32-50v-34z" fill="#fff"/>
+  <path d="M404 210l11 11 19-22" stroke="#d7263d" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <g font-family="Figtree,sans-serif" font-size="17" font-weight="600" fill="#cdd5ea" text-anchor="middle">
+    <text x="45" y="392">Señales</text><text x="135" y="392">LZB (caído)</text><text x="225" y="392">ASFA</text><text x="315" y="392">Personas</text>
+  </g>
+  <text x="418" y="408" font-family="Unbounded,sans-serif" font-size="18" font-weight="700" fill="#fff" text-anchor="middle">Guarda</text>
+</svg>
+<div class="foot"><b>Modelo formal TLA+</b> · Simulador 3D · Código abierto</div>
+<div class="rail"></div>
+</body></html>
