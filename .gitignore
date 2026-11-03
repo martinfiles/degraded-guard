@@ -3,3 +3,6 @@ node_modules/
 tools/tla2tools.jar
 spec/states/
 *.tlacov
+
+# Capturas de pantalla locales
+docs/Captura de pantalla*.png
